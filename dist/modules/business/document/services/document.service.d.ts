@@ -49,6 +49,7 @@ export declare class DocumentService {
                 level: number;
             };
         };
+        documentTemplate: any;
         canCancelApproval: boolean;
         canCancelSubmit: boolean;
         id: string;
@@ -142,6 +143,7 @@ export declare class DocumentService {
         drafterFilter?: string;
         referenceReadStatus?: string;
         pendingStatusFilter?: string;
+        agreementStepStatus?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;

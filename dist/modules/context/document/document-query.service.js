@@ -15,12 +15,14 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("typeorm");
 const document_entity_1 = require("../../domain/document/document.entity");
 const document_service_1 = require("../../domain/document/document.service");
+const document_template_service_1 = require("../../domain/document-template/document-template.service");
 const approval_enum_1 = require("../../../common/enums/approval.enum");
 const document_filter_builder_1 = require("./document-filter.builder");
 let DocumentQueryService = DocumentQueryService_1 = class DocumentQueryService {
-    constructor(dataSource, documentService, filterBuilder) {
+    constructor(dataSource, documentService, documentTemplateService, filterBuilder) {
         this.dataSource = dataSource;
         this.documentService = documentService;
+        this.documentTemplateService = documentTemplateService;
         this.filterBuilder = filterBuilder;
         this.logger = new common_1.Logger(DocumentQueryService_1.name);
     }
@@ -44,6 +46,13 @@ let DocumentQueryService = DocumentQueryService_1 = class DocumentQueryService {
         if (!document) {
             throw new common_1.NotFoundException(`문서를 찾을 수 없습니다: ${documentId}`);
         }
+        let documentTemplate = null;
+        if (document.documentTemplateId) {
+            documentTemplate = await this.documentTemplateService.findOne({
+                where: { id: document.documentTemplateId },
+                relations: ['category'],
+            });
+        }
         const drafterWithDeptPos = this.extractDrafterDepartmentPosition(document.drafter);
         if (userId) {
             const canCancelApproval = document.approvalSteps && document.approvalSteps.length > 0
@@ -53,6 +62,7 @@ let DocumentQueryService = DocumentQueryService_1 = class DocumentQueryService {
             return {
                 ...document,
                 drafter: drafterWithDeptPos,
+                documentTemplate,
                 canCancelApproval,
                 canCancelSubmit,
             };
@@ -60,6 +70,7 @@ let DocumentQueryService = DocumentQueryService_1 = class DocumentQueryService {
         return {
             ...document,
             drafter: drafterWithDeptPos,
+            documentTemplate,
             canCancelApproval: false,
             canCancelSubmit: false,
         };
@@ -192,6 +203,7 @@ let DocumentQueryService = DocumentQueryService_1 = class DocumentQueryService {
             drafterFilter: params.drafterFilter,
             referenceReadStatus: params.referenceReadStatus,
             pendingStatusFilter: params.pendingStatusFilter,
+            agreementStepStatus: params.agreementStepStatus,
         });
         if (params.searchKeyword) {
             baseQb.leftJoin('document_templates', 'template', 'document.documentTemplateId = template.id');
@@ -475,6 +487,7 @@ exports.DocumentQueryService = DocumentQueryService = DocumentQueryService_1 = _
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [typeorm_1.DataSource,
         document_service_1.DomainDocumentService,
+        document_template_service_1.DomainDocumentTemplateService,
         document_filter_builder_1.DocumentFilterBuilder])
 ], DocumentQueryService);
 //# sourceMappingURL=document-query.service.js.map

@@ -1,15 +1,17 @@
 import { DataSource, QueryRunner } from 'typeorm';
 import { Document } from '../../domain/document/document.entity';
 import { DomainDocumentService } from '../../domain/document/document.service';
+import { DomainDocumentTemplateService } from '../../domain/document-template/document-template.service';
 import { DocumentFilterDto } from './dtos/document.dto';
 import { DocumentStatus } from '../../../common/enums/approval.enum';
 import { DocumentFilterBuilder } from './document-filter.builder';
 export declare class DocumentQueryService {
     private readonly dataSource;
     private readonly documentService;
+    private readonly documentTemplateService;
     private readonly filterBuilder;
     private readonly logger;
-    constructor(dataSource: DataSource, documentService: DomainDocumentService, filterBuilder: DocumentFilterBuilder);
+    constructor(dataSource: DataSource, documentService: DomainDocumentService, documentTemplateService: DomainDocumentTemplateService, filterBuilder: DocumentFilterBuilder);
     getDocument(documentId: string, userId?: string, queryRunner?: QueryRunner): Promise<{
         drafter: {
             id: string;
@@ -28,6 +30,7 @@ export declare class DocumentQueryService {
                 level: number;
             };
         };
+        documentTemplate: any;
         canCancelApproval: boolean;
         canCancelSubmit: boolean;
         id: string;
@@ -74,6 +77,7 @@ export declare class DocumentQueryService {
         drafterFilter?: string;
         referenceReadStatus?: string;
         pendingStatusFilter?: string;
+        agreementStepStatus?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;

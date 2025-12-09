@@ -40,6 +40,7 @@ let DocumentController = class DocumentController {
             drafterFilter: query.drafterFilter,
             referenceReadStatus: query.referenceReadStatus,
             pendingStatusFilter: query.pendingStatusFilter,
+            agreementStepStatus: query.agreementStepStatus,
             searchKeyword: query.searchKeyword,
             startDate: query.startDate ? new Date(query.startDate) : undefined,
             endDate: query.endDate ? new Date(query.endDate) : undefined,
@@ -258,7 +259,7 @@ __decorate([
             '- RECEIVED: 수신함 (내가 결재라인에 있지만 현재 내 차례가 아닌 문서)\n' +
             '  * 아직 내 차례가 아닌 것 (앞에 PENDING 단계 있음)\n' +
             '  * 이미 내가 처리한 것 (내 단계가 APPROVED)\n' +
-            '- PENDING_AGREEMENT: 합의함 (현재 내가 협의해야 하는 문서)\n' +
+            '- PENDING_AGREEMENT: 합의함 (내가 합의자로 있는 문서)\n' +
             '- PENDING_APPROVAL: 결재함 (현재 내가 결재해야 하는 문서)\n' +
             '- IMPLEMENTATION: 시행함 (현재 내가 시행해야 하는 문서, 시행 단계가 PENDING)\n' +
             '- APPROVED: 기결함 (내가 관련된 모든 결재 완료 문서, APPROVED/IMPLEMENTED)\n' +
@@ -276,6 +277,11 @@ __decorate([
             '- CANCELLED: 취소된 문서만\n' +
             '- IMPLEMENTED: 시행 완료된 문서만\n' +
             '- 미지정: DRAFT를 제외한 모든 상태\n\n' +
+            '**합의함 단계 상태 필터 (agreementStepStatus) - PENDING_AGREEMENT에만 적용:**\n' +
+            '- SCHEDULED: 아직 내 차례가 아닌 상태\n' +
+            '- PENDING: 내 차례인 상태 (현재 합의 대기)\n' +
+            '- COMPLETED: 내 차례가 완료된 상태 (이미 합의 완료)\n' +
+            '- 미지정: 모든 상태\n\n' +
             '**수신함 단계 타입 필터 (receivedStepType) - RECEIVED에만 적용:**\n' +
             '- AGREEMENT: 합의 단계로 수신한 문서만\n' +
             '- APPROVAL: 결재 단계로 수신한 문서만\n' +
@@ -292,28 +298,7 @@ __decorate([
             '- searchKeyword: 문서 제목 또는 템플릿 이름 검색\n' +
             '- startDate, endDate: 제출일 구분\n' +
             '- sortOrder: 정렬 순서 (LATEST: 최신순, OLDEST: 오래된순)\n' +
-            '- page, limit: 페이징\n\n' +
-            '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 전체 문서 목록 조회 (filterType 없음)\n' +
-            '- ✅ 정상: DRAFT 필터링\n' +
-            '- ✅ 정상: PENDING 필터링\n' +
-            '- ✅ 정상: PENDING + pendingStatusFilter=PENDING 필터링\n' +
-            '- ✅ 정상: PENDING + pendingStatusFilter=APPROVED 필터링\n' +
-            '- ✅ 정상: PENDING + pendingStatusFilter=REJECTED 필터링\n' +
-            '- ✅ 정상: RECEIVED 필터링\n' +
-            '- ✅ 정상: PENDING_APPROVAL 필터링\n' +
-            '- ✅ 정상: PENDING_AGREEMENT 필터링\n' +
-            '- ✅ 정상: RECEIVED + AGREEMENT 필터링\n' +
-            '- ✅ 정상: RECEIVED + APPROVAL 필터링\n' +
-            '- ✅ 정상: APPROVED + MY_DRAFT 필터링\n' +
-            '- ✅ 정상: APPROVED + PARTICIPATED 필터링\n' +
-            '- ✅ 정상: REJECTED + MY_DRAFT 필터링\n' +
-            '- ✅ 정상: IMPLEMENTATION 필터링\n' +
-            '- ✅ 정상: APPROVED 필터링\n' +
-            '- ✅ 정상: REJECTED 필터링\n' +
-            '- ✅ 정상: RECEIVED_REFERENCE 필터링\n' +
-            '- ✅ 정상: 검색어로 문서 제목 또는 템플릿 이름 검색\n' +
-            '- ✅ 정상: 제출일 범위 필터링',
+            '- page, limit: 페이징',
     }),
     (0, swagger_1.ApiResponse)({
         status: 200,
