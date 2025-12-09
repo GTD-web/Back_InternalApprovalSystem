@@ -22,7 +22,7 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
                 this.applyReceivedFilter(qb, userId, options?.receivedStepType);
                 break;
             case 'PENDING_AGREEMENT':
-                this.applyPendingAgreementFilter(qb, userId);
+                this.applyPendingAgreementFilter(qb, userId, options?.agreementStepStatus);
                 break;
             case 'PENDING_APPROVAL':
                 this.applyPendingApprovalFilter(qb, userId);
@@ -103,25 +103,84 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
             approvedStepStatus: approval_enum_1.ApprovalStatus.APPROVED,
         });
     }
-    applyPendingAgreementFilter(qb, userId) {
-        qb.andWhere('document.drafterId != :userId', { userId }).andWhere(`document.id IN (
-                SELECT DISTINCT my_step."documentId"
-                FROM approval_step_snapshots my_step
-                INNER JOIN documents d ON my_step."documentId" = d.id
-                WHERE my_step."approverId" = :userId
-                AND my_step."stepType" = :agreementType
-                AND d.status = :pendingStatus
-                AND d."drafterId" != :userId
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM approval_step_snapshots prior_step
-                    WHERE prior_step."documentId" = my_step."documentId"
-                    AND prior_step."stepOrder" < my_step."stepOrder"
-                )
-            )`, {
-            pendingStatus: approval_enum_1.DocumentStatus.PENDING,
-            agreementType: approval_enum_1.ApprovalStepType.AGREEMENT,
-        });
+    applyPendingAgreementFilter(qb, userId, agreementStepStatus) {
+        qb.andWhere('document.drafterId != :userId', { userId });
+        if (agreementStepStatus === 'SCHEDULED') {
+            qb.andWhere(`document.id IN (
+                    SELECT DISTINCT my_step."documentId"
+                    FROM approval_step_snapshots my_step
+                    INNER JOIN documents d ON my_step."documentId" = d.id
+                    WHERE my_step."approverId" = :userId
+                    AND my_step."stepType" = :agreementType
+                    AND d.status = :pendingStatus
+                    AND d."drafterId" != :userId
+                    AND my_step.status = :pendingStepStatus
+                    AND EXISTS (
+                        SELECT 1
+                        FROM approval_step_snapshots prior_step
+                        WHERE prior_step."documentId" = my_step."documentId"
+                        AND prior_step."stepOrder" < my_step."stepOrder"
+                        AND prior_step.status = :pendingStepStatus
+                    )
+                )`, {
+                pendingStatus: approval_enum_1.DocumentStatus.PENDING,
+                agreementType: approval_enum_1.ApprovalStepType.AGREEMENT,
+                pendingStepStatus: approval_enum_1.ApprovalStatus.PENDING,
+            });
+        }
+        else if (agreementStepStatus === 'PENDING') {
+            qb.andWhere(`document.id IN (
+                    SELECT DISTINCT my_step."documentId"
+                    FROM approval_step_snapshots my_step
+                    INNER JOIN documents d ON my_step."documentId" = d.id
+                    WHERE my_step."approverId" = :userId
+                    AND my_step."stepType" = :agreementType
+                    AND d.status = :pendingStatus
+                    AND d."drafterId" != :userId
+                    AND my_step.status = :pendingStepStatus
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM approval_step_snapshots prior_step
+                        WHERE prior_step."documentId" = my_step."documentId"
+                        AND prior_step."stepOrder" < my_step."stepOrder"
+                        AND prior_step.status = :pendingStepStatus
+                    )
+                )`, {
+                pendingStatus: approval_enum_1.DocumentStatus.PENDING,
+                agreementType: approval_enum_1.ApprovalStepType.AGREEMENT,
+                pendingStepStatus: approval_enum_1.ApprovalStatus.PENDING,
+            });
+        }
+        else if (agreementStepStatus === 'COMPLETED') {
+            qb.andWhere(`document.id IN (
+                    SELECT DISTINCT my_step."documentId"
+                    FROM approval_step_snapshots my_step
+                    INNER JOIN documents d ON my_step."documentId" = d.id
+                    WHERE my_step."approverId" = :userId
+                    AND my_step."stepType" = :agreementType
+                    AND d.status = :pendingStatus
+                    AND d."drafterId" != :userId
+                    AND my_step.status = :approvedStepStatus
+                )`, {
+                pendingStatus: approval_enum_1.DocumentStatus.PENDING,
+                agreementType: approval_enum_1.ApprovalStepType.AGREEMENT,
+                approvedStepStatus: approval_enum_1.ApprovalStatus.APPROVED,
+            });
+        }
+        else {
+            qb.andWhere(`document.id IN (
+                    SELECT DISTINCT my_step."documentId"
+                    FROM approval_step_snapshots my_step
+                    INNER JOIN documents d ON my_step."documentId" = d.id
+                    WHERE my_step."approverId" = :userId
+                    AND my_step."stepType" = :agreementType
+                    AND d.status = :pendingStatus
+                    AND d."drafterId" != :userId
+                )`, {
+                pendingStatus: approval_enum_1.DocumentStatus.PENDING,
+                agreementType: approval_enum_1.ApprovalStepType.AGREEMENT,
+            });
+        }
     }
     applyPendingApprovalFilter(qb, userId) {
         qb.andWhere('document.drafterId != :userId', { userId }).andWhere(`document.id IN (

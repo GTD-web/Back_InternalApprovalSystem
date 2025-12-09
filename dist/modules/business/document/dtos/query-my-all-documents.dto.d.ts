@@ -28,6 +28,11 @@ export declare enum PendingStatusFilter {
     CANCELLED = "CANCELLED",
     IMPLEMENTED = "IMPLEMENTED"
 }
+export declare enum AgreementStepStatus {
+    SCHEDULED = "SCHEDULED",
+    PENDING = "PENDING",
+    COMPLETED = "COMPLETED"
+}
 export declare enum SortOrder {
     LATEST = "LATEST",
     OLDEST = "OLDEST"
@@ -38,6 +43,7 @@ export declare class QueryMyAllDocumentsDto {
     drafterFilter?: DrafterFilter;
     referenceReadStatus?: ReferenceReadStatus;
     pendingStatusFilter?: PendingStatusFilter;
+    agreementStepStatus?: AgreementStepStatus;
     searchKeyword?: string;
     startDate?: string;
     endDate?: string;

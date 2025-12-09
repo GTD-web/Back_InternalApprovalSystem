@@ -73,6 +73,18 @@ export enum PendingStatusFilter {
 }
 
 /**
+ * 합의함 단계 상태 필터 Enum (PENDING_AGREEMENT에만 적용)
+ */
+export enum AgreementStepStatus {
+    /** 아직 내 차례가 아닌 상태 (앞에 처리 대기 단계 있음) */
+    SCHEDULED = 'SCHEDULED',
+    /** 내 차례인 상태 (현재 합의 대기) */
+    PENDING = 'PENDING',
+    /** 내 차례가 완료된 상태 (이미 합의 완료) */
+    COMPLETED = 'COMPLETED',
+}
+
+/**
  * 정렬 순서 Enum
  */
 export enum SortOrder {
@@ -186,6 +198,20 @@ export class QueryMyAllDocumentsDto {
     @IsOptional()
     @IsEnum(PendingStatusFilter)
     pendingStatusFilter?: PendingStatusFilter;
+
+    @ApiPropertyOptional({
+        description:
+            '합의함 단계 상태 필터 (PENDING_AGREEMENT에만 적용)\n' +
+            '- SCHEDULED: 아직 내 차례가 아닌 상태\n' +
+            '- PENDING: 내 차례인 상태 (현재 합의 대기)\n' +
+            '- COMPLETED: 내 차례가 완료된 상태 (이미 합의 완료)\n' +
+            '- 미지정: 모든 상태',
+        enum: AgreementStepStatus,
+        example: AgreementStepStatus.PENDING,
+    })
+    @IsOptional()
+    @IsEnum(AgreementStepStatus)
+    agreementStepStatus?: AgreementStepStatus;
 
     @ApiPropertyOptional({
         description: '검색어 (문서 제목 또는 템플릿 이름)',

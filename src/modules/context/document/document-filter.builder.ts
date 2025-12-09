@@ -25,6 +25,7 @@ export class DocumentFilterBuilder {
             drafterFilter?: string;
             referenceReadStatus?: string;
             pendingStatusFilter?: string;
+            agreementStepStatus?: string;
         },
     ): void {
         switch (filterType) {
@@ -41,7 +42,7 @@ export class DocumentFilterBuilder {
                 break;
 
             case 'PENDING_AGREEMENT':
-                this.applyPendingAgreementFilter(qb, userId);
+                this.applyPendingAgreementFilter(qb, userId, options?.agreementStepStatus);
                 break;
 
             case 'PENDING_APPROVAL':
@@ -154,30 +155,108 @@ export class DocumentFilterBuilder {
     }
 
     /**
-     * 합의함 필터 (현재 내가 합의해야 하는 문서)
+     * 합의함 필터 (내가 합의자로 있는 문서)
+     * @param agreementStepStatus - 합의 단계 상태 필터
+     *   - SCHEDULED: 아직 내 차례가 아닌 상태 (앞에 PENDING 단계 있음)
+     *   - PENDING: 내 차례인 상태 (현재 합의 대기)
+     *   - COMPLETED: 내 차례가 완료된 상태 (이미 합의 완료)
      */
-    private applyPendingAgreementFilter(qb: SelectQueryBuilder<Document>, userId: string): void {
-        qb.andWhere('document.drafterId != :userId', { userId }).andWhere(
-            `document.id IN (
-                SELECT DISTINCT my_step."documentId"
-                FROM approval_step_snapshots my_step
-                INNER JOIN documents d ON my_step."documentId" = d.id
-                WHERE my_step."approverId" = :userId
-                AND my_step."stepType" = :agreementType
-                AND d.status = :pendingStatus
-                AND d."drafterId" != :userId
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM approval_step_snapshots prior_step
-                    WHERE prior_step."documentId" = my_step."documentId"
-                    AND prior_step."stepOrder" < my_step."stepOrder"
-                )
-            )`,
-            {
-                pendingStatus: DocumentStatus.PENDING,
-                agreementType: ApprovalStepType.AGREEMENT,
-            },
-        );
+    private applyPendingAgreementFilter(
+        qb: SelectQueryBuilder<Document>,
+        userId: string,
+        agreementStepStatus?: string,
+    ): void {
+        qb.andWhere('document.drafterId != :userId', { userId });
+
+        if (agreementStepStatus === 'SCHEDULED') {
+            // 아직 내 차례가 아닌 상태: 내 앞에 PENDING 상태의 단계가 있음
+            qb.andWhere(
+                `document.id IN (
+                    SELECT DISTINCT my_step."documentId"
+                    FROM approval_step_snapshots my_step
+                    INNER JOIN documents d ON my_step."documentId" = d.id
+                    WHERE my_step."approverId" = :userId
+                    AND my_step."stepType" = :agreementType
+                    AND d.status = :pendingStatus
+                    AND d."drafterId" != :userId
+                    AND my_step.status = :pendingStepStatus
+                    AND EXISTS (
+                        SELECT 1
+                        FROM approval_step_snapshots prior_step
+                        WHERE prior_step."documentId" = my_step."documentId"
+                        AND prior_step."stepOrder" < my_step."stepOrder"
+                        AND prior_step.status = :pendingStepStatus
+                    )
+                )`,
+                {
+                    pendingStatus: DocumentStatus.PENDING,
+                    agreementType: ApprovalStepType.AGREEMENT,
+                    pendingStepStatus: ApprovalStatus.PENDING,
+                },
+            );
+        } else if (agreementStepStatus === 'PENDING') {
+            // 내 차례인 상태: 내 앞에 PENDING 상태의 단계가 없고, 내 단계가 PENDING
+            qb.andWhere(
+                `document.id IN (
+                    SELECT DISTINCT my_step."documentId"
+                    FROM approval_step_snapshots my_step
+                    INNER JOIN documents d ON my_step."documentId" = d.id
+                    WHERE my_step."approverId" = :userId
+                    AND my_step."stepType" = :agreementType
+                    AND d.status = :pendingStatus
+                    AND d."drafterId" != :userId
+                    AND my_step.status = :pendingStepStatus
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM approval_step_snapshots prior_step
+                        WHERE prior_step."documentId" = my_step."documentId"
+                        AND prior_step."stepOrder" < my_step."stepOrder"
+                        AND prior_step.status = :pendingStepStatus
+                    )
+                )`,
+                {
+                    pendingStatus: DocumentStatus.PENDING,
+                    agreementType: ApprovalStepType.AGREEMENT,
+                    pendingStepStatus: ApprovalStatus.PENDING,
+                },
+            );
+        } else if (agreementStepStatus === 'COMPLETED') {
+            // 내 차례가 완료된 상태: 내 단계가 APPROVED
+            qb.andWhere(
+                `document.id IN (
+                    SELECT DISTINCT my_step."documentId"
+                    FROM approval_step_snapshots my_step
+                    INNER JOIN documents d ON my_step."documentId" = d.id
+                    WHERE my_step."approverId" = :userId
+                    AND my_step."stepType" = :agreementType
+                    AND d.status = :pendingStatus
+                    AND d."drafterId" != :userId
+                    AND my_step.status = :approvedStepStatus
+                )`,
+                {
+                    pendingStatus: DocumentStatus.PENDING,
+                    agreementType: ApprovalStepType.AGREEMENT,
+                    approvedStepStatus: ApprovalStatus.APPROVED,
+                },
+            );
+        } else {
+            // 기본: 모든 합의 문서 (내가 합의자로 있는 모든 진행중 문서)
+            qb.andWhere(
+                `document.id IN (
+                    SELECT DISTINCT my_step."documentId"
+                    FROM approval_step_snapshots my_step
+                    INNER JOIN documents d ON my_step."documentId" = d.id
+                    WHERE my_step."approverId" = :userId
+                    AND my_step."stepType" = :agreementType
+                    AND d.status = :pendingStatus
+                    AND d."drafterId" != :userId
+                )`,
+                {
+                    pendingStatus: DocumentStatus.PENDING,
+                    agreementType: ApprovalStepType.AGREEMENT,
+                },
+            );
+        }
     }
 
     /**

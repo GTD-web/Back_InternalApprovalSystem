@@ -94,6 +94,7 @@ export declare class DocumentController {
                 level: number;
             };
         };
+        documentTemplate: any;
         canCancelApproval: boolean;
         canCancelSubmit: boolean;
         id: string;

@@ -323,6 +323,7 @@ export class DocumentService {
         drafterFilter?: string;
         referenceReadStatus?: string;
         pendingStatusFilter?: string;
+        agreementStepStatus?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;

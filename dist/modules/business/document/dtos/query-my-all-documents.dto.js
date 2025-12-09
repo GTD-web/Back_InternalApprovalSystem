@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.QueryMyAllDocumentsDto = exports.SortOrder = exports.PendingStatusFilter = exports.ReferenceReadStatus = exports.DrafterFilter = exports.ReceivedStepType = exports.MyAllDocumentFilterType = void 0;
+exports.QueryMyAllDocumentsDto = exports.SortOrder = exports.AgreementStepStatus = exports.PendingStatusFilter = exports.ReferenceReadStatus = exports.DrafterFilter = exports.ReceivedStepType = exports.MyAllDocumentFilterType = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
@@ -48,6 +48,12 @@ var PendingStatusFilter;
     PendingStatusFilter["CANCELLED"] = "CANCELLED";
     PendingStatusFilter["IMPLEMENTED"] = "IMPLEMENTED";
 })(PendingStatusFilter || (exports.PendingStatusFilter = PendingStatusFilter = {}));
+var AgreementStepStatus;
+(function (AgreementStepStatus) {
+    AgreementStepStatus["SCHEDULED"] = "SCHEDULED";
+    AgreementStepStatus["PENDING"] = "PENDING";
+    AgreementStepStatus["COMPLETED"] = "COMPLETED";
+})(AgreementStepStatus || (exports.AgreementStepStatus = AgreementStepStatus = {}));
 var SortOrder;
 (function (SortOrder) {
     SortOrder["LATEST"] = "LATEST";
@@ -132,6 +138,20 @@ __decorate([
     (0, class_validator_1.IsEnum)(PendingStatusFilter),
     __metadata("design:type", String)
 ], QueryMyAllDocumentsDto.prototype, "pendingStatusFilter", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '합의함 단계 상태 필터 (PENDING_AGREEMENT에만 적용)\n' +
+            '- SCHEDULED: 아직 내 차례가 아닌 상태\n' +
+            '- PENDING: 내 차례인 상태 (현재 합의 대기)\n' +
+            '- COMPLETED: 내 차례가 완료된 상태 (이미 합의 완료)\n' +
+            '- 미지정: 모든 상태',
+        enum: AgreementStepStatus,
+        example: AgreementStepStatus.PENDING,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(AgreementStepStatus),
+    __metadata("design:type", String)
+], QueryMyAllDocumentsDto.prototype, "agreementStepStatus", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
         description: '검색어 (문서 제목 또는 템플릿 이름)',

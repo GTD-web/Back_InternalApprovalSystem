@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 import { Document } from '../../domain/document/document.entity';
 import { DomainDocumentService } from '../../domain/document/document.service';
+import { DomainDocumentTemplateService } from '../../domain/document-template/document-template.service';
 import { DocumentFilterDto } from './dtos/document.dto';
 import { DocumentStatus, ApprovalStatus, ApprovalStepType } from '../../../common/enums/approval.enum';
 import { DocumentFilterBuilder } from './document-filter.builder';
@@ -21,6 +22,7 @@ export class DocumentQueryService {
     constructor(
         private readonly dataSource: DataSource,
         private readonly documentService: DomainDocumentService,
+        private readonly documentTemplateService: DomainDocumentTemplateService,
         private readonly filterBuilder: DocumentFilterBuilder,
     ) {}
 
@@ -56,6 +58,15 @@ export class DocumentQueryService {
             throw new NotFoundException(`문서를 찾을 수 없습니다: ${documentId}`);
         }
 
+        // 템플릿 및 카테고리 정보 직접 조회
+        let documentTemplate = null;
+        if (document.documentTemplateId) {
+            documentTemplate = await this.documentTemplateService.findOne({
+                where: { id: document.documentTemplateId },
+                relations: ['category'],
+            });
+        }
+
         // 기안자의 부서/포지션 정보 추출
         const drafterWithDeptPos = this.extractDrafterDepartmentPosition(document.drafter);
 
@@ -76,6 +87,7 @@ export class DocumentQueryService {
             return {
                 ...document,
                 drafter: drafterWithDeptPos,
+                documentTemplate,
                 canCancelApproval,
                 canCancelSubmit,
             };
@@ -84,6 +96,7 @@ export class DocumentQueryService {
         return {
             ...document,
             drafter: drafterWithDeptPos,
+            documentTemplate,
             canCancelApproval: false,
             canCancelSubmit: false,
         };
@@ -320,6 +333,7 @@ export class DocumentQueryService {
         drafterFilter?: string;
         referenceReadStatus?: string;
         pendingStatusFilter?: string;
+        agreementStepStatus?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;
@@ -348,6 +362,7 @@ export class DocumentQueryService {
             drafterFilter: params.drafterFilter,
             referenceReadStatus: params.referenceReadStatus,
             pendingStatusFilter: params.pendingStatusFilter,
+            agreementStepStatus: params.agreementStepStatus,
         });
 
         // 추가 필터링 조건

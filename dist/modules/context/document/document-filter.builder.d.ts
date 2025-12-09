@@ -6,6 +6,7 @@ export declare class DocumentFilterBuilder {
         drafterFilter?: string;
         referenceReadStatus?: string;
         pendingStatusFilter?: string;
+        agreementStepStatus?: string;
     }): void;
     private applyDraftFilter;
     private applyPendingFilter;
