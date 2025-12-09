@@ -191,6 +191,7 @@ let DocumentQueryService = DocumentQueryService_1 = class DocumentQueryService {
             receivedStepType: params.receivedStepType,
             drafterFilter: params.drafterFilter,
             referenceReadStatus: params.referenceReadStatus,
+            pendingStatusFilter: params.pendingStatusFilter,
         });
         if (params.searchKeyword) {
             baseQb.leftJoin('document_templates', 'template', 'document.documentTemplateId = template.id');

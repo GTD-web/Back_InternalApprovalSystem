@@ -1,12 +1,14 @@
 import { DomainCommentService } from '../../domain/comment/comment.service';
 import { DomainDocumentService } from '../../domain/document/document.service';
 import { DomainEmployeeService } from '../../domain/employee/employee.service';
+import { DomainApprovalStepSnapshotService } from '../../domain/approval-step-snapshot/approval-step-snapshot.service';
 export declare class CommentContext {
     private readonly commentService;
     private readonly documentService;
     private readonly employeeService;
+    private readonly approvalStepSnapshotService;
     private readonly logger;
-    constructor(commentService: DomainCommentService, documentService: DomainDocumentService, employeeService: DomainEmployeeService);
+    constructor(commentService: DomainCommentService, documentService: DomainDocumentService, employeeService: DomainEmployeeService, approvalStepSnapshotService: DomainApprovalStepSnapshotService);
     코멘트를작성한다(params: {
         documentId: string;
         authorId: string;

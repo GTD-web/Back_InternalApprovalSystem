@@ -15,11 +15,14 @@ const common_1 = require("@nestjs/common");
 const comment_service_1 = require("../../domain/comment/comment.service");
 const document_service_1 = require("../../domain/document/document.service");
 const employee_service_1 = require("../../domain/employee/employee.service");
+const approval_step_snapshot_service_1 = require("../../domain/approval-step-snapshot/approval-step-snapshot.service");
+const approval_enum_1 = require("../../../common/enums/approval.enum");
 let CommentContext = CommentContext_1 = class CommentContext {
-    constructor(commentService, documentService, employeeService) {
+    constructor(commentService, documentService, employeeService, approvalStepSnapshotService) {
         this.commentService = commentService;
         this.documentService = documentService;
         this.employeeService = employeeService;
+        this.approvalStepSnapshotService = approvalStepSnapshotService;
         this.logger = new common_1.Logger(CommentContext_1.name);
     }
     async 코멘트를작성한다(params) {
@@ -30,6 +33,14 @@ let CommentContext = CommentContext_1 = class CommentContext {
         await this.employeeService.findOneWithError({
             where: { id: params.authorId },
         });
+        const approvalSteps = await this.approvalStepSnapshotService.findAll({
+            where: { documentId: params.documentId },
+        });
+        const isAuthorized = approvalSteps.some((step) => step.approverId === params.authorId &&
+            (step.stepType === approval_enum_1.ApprovalStepType.AGREEMENT || step.stepType === approval_enum_1.ApprovalStepType.APPROVAL));
+        if (!isAuthorized) {
+            throw new common_1.ForbiddenException('해당 문서의 합의자 또는 결재자만 코멘트를 작성할 수 있습니다');
+        }
         if (params.parentCommentId) {
             const parentComment = await this.commentService.findOneWithError({
                 where: { id: params.parentCommentId },
@@ -98,6 +109,7 @@ exports.CommentContext = CommentContext = CommentContext_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [comment_service_1.DomainCommentService,
         document_service_1.DomainDocumentService,
-        employee_service_1.DomainEmployeeService])
+        employee_service_1.DomainEmployeeService,
+        approval_step_snapshot_service_1.DomainApprovalStepSnapshotService])
 ], CommentContext);
 //# sourceMappingURL=comment.context.js.map

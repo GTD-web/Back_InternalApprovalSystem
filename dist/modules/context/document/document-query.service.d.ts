@@ -73,6 +73,7 @@ export declare class DocumentQueryService {
         receivedStepType?: string;
         drafterFilter?: string;
         referenceReadStatus?: string;
+        pendingStatusFilter?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;

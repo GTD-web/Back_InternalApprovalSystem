@@ -3,7 +3,7 @@ import { DataSource } from 'typeorm';
 import { ApprovalProcessContext } from '../../../context/approval-process/approval-process.context';
 import { DocumentContext } from '../../../context/document/document.context';
 import { DocumentQueryService } from '../../../context/document/document-query.service';
-import { NotificationContext } from '../../../context/notification/notification.context';
+import { DocumentNotificationService } from '../../../context/notification/document-notification.service';
 import { withTransaction } from 'src/common/utils/transaction.util';
 import {
     ApproveStepDto,
@@ -29,7 +29,7 @@ export class ApprovalProcessService {
         private readonly approvalProcessContext: ApprovalProcessContext,
         private readonly documentContext: DocumentContext,
         private readonly documentQueryService: DocumentQueryService,
-        private readonly notificationContext: NotificationContext,
+        private readonly documentNotificationService: DocumentNotificationService,
     ) {}
 
     /**
@@ -316,8 +316,14 @@ export class ApprovalProcessService {
             const document = await this.documentQueryService.getDocument(documentId);
             const allSteps = await this.approvalProcessContext.getApprovalStepsByDocumentId(documentId);
 
-            await this.notificationContext.sendNotificationAfterApprove({
-                document,
+            await this.documentNotificationService.sendNotificationAfterApprove({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: document.drafter?.name,
+                    status: document.status,
+                },
                 allSteps,
                 currentStepId,
                 approverEmployeeNumber,
@@ -339,8 +345,14 @@ export class ApprovalProcessService {
         try {
             const document = await this.documentQueryService.getDocument(documentId);
 
-            await this.notificationContext.sendNotificationAfterReject({
-                document,
+            await this.documentNotificationService.sendNotificationAfterReject({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: document.drafter?.name,
+                    status: document.status,
+                },
                 rejectReason,
                 rejecterEmployeeNumber,
             });
@@ -358,8 +370,14 @@ export class ApprovalProcessService {
             const document = await this.documentQueryService.getDocument(documentId);
             const allSteps = await this.approvalProcessContext.getApprovalStepsByDocumentId(documentId);
 
-            await this.notificationContext.sendNotificationAfterCompleteAgreement({
-                document,
+            await this.documentNotificationService.sendNotificationAfterCompleteAgreement({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: document.drafter?.name,
+                    status: document.status,
+                },
                 allSteps,
                 agreerEmployeeNumber,
             });
@@ -380,8 +398,14 @@ export class ApprovalProcessService {
             const document = await this.documentQueryService.getDocument(documentId);
             const allSteps = await this.approvalProcessContext.getApprovalStepsByDocumentId(documentId);
 
-            await this.notificationContext.sendNotificationAfterCompleteImplementation({
-                document,
+            await this.documentNotificationService.sendNotificationAfterCompleteImplementation({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: document.drafter?.name,
+                    status: document.status,
+                },
                 allSteps,
                 implementerEmployeeNumber,
             });

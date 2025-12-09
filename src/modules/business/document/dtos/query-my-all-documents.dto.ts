@@ -57,6 +57,22 @@ export enum ReferenceReadStatus {
 }
 
 /**
+ * 상신함 문서 상태 필터 Enum (PENDING에만 적용)
+ */
+export enum PendingStatusFilter {
+    /** 결재 진행중 */
+    PENDING = 'PENDING',
+    /** 결재 완료 */
+    APPROVED = 'APPROVED',
+    /** 반려됨 */
+    REJECTED = 'REJECTED',
+    /** 취소됨 */
+    CANCELLED = 'CANCELLED',
+    /** 시행 완료 */
+    IMPLEMENTED = 'IMPLEMENTED',
+}
+
+/**
  * 정렬 순서 Enum
  */
 export enum SortOrder {
@@ -154,6 +170,22 @@ export class QueryMyAllDocumentsDto {
     @IsOptional()
     @IsEnum(ReferenceReadStatus)
     referenceReadStatus?: ReferenceReadStatus;
+
+    @ApiPropertyOptional({
+        description:
+            '상신함 문서 상태 필터 (PENDING에만 적용)\n' +
+            '- PENDING: 결재 진행중\n' +
+            '- APPROVED: 결재 완료\n' +
+            '- REJECTED: 반려됨\n' +
+            '- CANCELLED: 취소됨\n' +
+            '- IMPLEMENTED: 시행 완료\n' +
+            '- 미지정: DRAFT를 제외한 모든 상태',
+        enum: PendingStatusFilter,
+        example: PendingStatusFilter.PENDING,
+    })
+    @IsOptional()
+    @IsEnum(PendingStatusFilter)
+    pendingStatusFilter?: PendingStatusFilter;
 
     @ApiPropertyOptional({
         description: '검색어 (문서 제목 또는 템플릿 이름)',

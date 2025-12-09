@@ -3,6 +3,8 @@ import { DocumentQueryService } from '../../../context/document/document-query.s
 import { TemplateContext } from '../../../context/template/template.context';
 import { ApprovalProcessContext } from '../../../context/approval-process/approval-process.context';
 import { NotificationContext } from '../../../context/notification/notification.context';
+import { DocumentNotificationService } from '../../../context/notification/document-notification.service';
+import { CommentNotificationService } from '../../../context/notification/comment-notification.service';
 import { CommentContext } from '../../../context/comment/comment.context';
 import { CreateDocumentDto, UpdateDocumentDto, SubmitDocumentDto, SubmitDocumentDirectDto, CreateTestDocumentDto } from '../dtos';
 import { DocumentFilterDto } from '../../../context/document/dtos/document.dto';
@@ -18,9 +20,11 @@ export declare class DocumentService {
     private readonly approverMappingService;
     private readonly approvalProcessContext;
     private readonly notificationContext;
+    private readonly documentNotificationService;
+    private readonly commentNotificationService;
     private readonly commentContext;
     private readonly logger;
-    constructor(dataSource: DataSource, documentContext: DocumentContext, documentQueryService: DocumentQueryService, templateContext: TemplateContext, approverMappingService: ApproverMappingService, approvalProcessContext: ApprovalProcessContext, notificationContext: NotificationContext, commentContext: CommentContext);
+    constructor(dataSource: DataSource, documentContext: DocumentContext, documentQueryService: DocumentQueryService, templateContext: TemplateContext, approverMappingService: ApproverMappingService, approvalProcessContext: ApprovalProcessContext, notificationContext: NotificationContext, documentNotificationService: DocumentNotificationService, commentNotificationService: CommentNotificationService, commentContext: CommentContext);
     createDocument(dto: CreateDocumentDto, drafterId: string): Promise<import("../../../domain").Document>;
     updateDocument(documentId: string, dto: UpdateDocumentDto): Promise<import("../../../domain").Document>;
     deleteDocument(documentId: string): Promise<{
@@ -137,6 +141,7 @@ export declare class DocumentService {
         receivedStepType?: string;
         drafterFilter?: string;
         referenceReadStatus?: string;
+        pendingStatusFilter?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;

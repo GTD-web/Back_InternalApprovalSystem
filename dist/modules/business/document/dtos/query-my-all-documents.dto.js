@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.QueryMyAllDocumentsDto = exports.SortOrder = exports.ReferenceReadStatus = exports.DrafterFilter = exports.ReceivedStepType = exports.MyAllDocumentFilterType = void 0;
+exports.QueryMyAllDocumentsDto = exports.SortOrder = exports.PendingStatusFilter = exports.ReferenceReadStatus = exports.DrafterFilter = exports.ReceivedStepType = exports.MyAllDocumentFilterType = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
@@ -40,6 +40,14 @@ var ReferenceReadStatus;
     ReferenceReadStatus["READ"] = "READ";
     ReferenceReadStatus["UNREAD"] = "UNREAD";
 })(ReferenceReadStatus || (exports.ReferenceReadStatus = ReferenceReadStatus = {}));
+var PendingStatusFilter;
+(function (PendingStatusFilter) {
+    PendingStatusFilter["PENDING"] = "PENDING";
+    PendingStatusFilter["APPROVED"] = "APPROVED";
+    PendingStatusFilter["REJECTED"] = "REJECTED";
+    PendingStatusFilter["CANCELLED"] = "CANCELLED";
+    PendingStatusFilter["IMPLEMENTED"] = "IMPLEMENTED";
+})(PendingStatusFilter || (exports.PendingStatusFilter = PendingStatusFilter = {}));
 var SortOrder;
 (function (SortOrder) {
     SortOrder["LATEST"] = "LATEST";
@@ -108,6 +116,22 @@ __decorate([
     (0, class_validator_1.IsEnum)(ReferenceReadStatus),
     __metadata("design:type", String)
 ], QueryMyAllDocumentsDto.prototype, "referenceReadStatus", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '상신함 문서 상태 필터 (PENDING에만 적용)\n' +
+            '- PENDING: 결재 진행중\n' +
+            '- APPROVED: 결재 완료\n' +
+            '- REJECTED: 반려됨\n' +
+            '- CANCELLED: 취소됨\n' +
+            '- IMPLEMENTED: 시행 완료\n' +
+            '- 미지정: DRAFT를 제외한 모든 상태',
+        enum: PendingStatusFilter,
+        example: PendingStatusFilter.PENDING,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(PendingStatusFilter),
+    __metadata("design:type", String)
+], QueryMyAllDocumentsDto.prototype, "pendingStatusFilter", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
         description: '검색어 (문서 제목 또는 템플릿 이름)',

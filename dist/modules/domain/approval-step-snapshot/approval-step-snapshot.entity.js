@@ -39,12 +39,15 @@ let ApprovalStepSnapshot = class ApprovalStepSnapshot {
     }
     반려한다() {
         this.status = approval_enum_1.ApprovalStatus.REJECTED;
+        this.approvedAt = new Date();
     }
     대기한다() {
         this.status = approval_enum_1.ApprovalStatus.PENDING;
+        this.approvedAt = null;
     }
     취소한다() {
         this.status = approval_enum_1.ApprovalStatus.CANCELLED;
+        this.approvedAt = null;
     }
 };
 exports.ApprovalStepSnapshot = ApprovalStepSnapshot;

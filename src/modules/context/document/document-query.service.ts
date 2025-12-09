@@ -319,6 +319,7 @@ export class DocumentQueryService {
         receivedStepType?: string;
         drafterFilter?: string;
         referenceReadStatus?: string;
+        pendingStatusFilter?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;
@@ -346,6 +347,7 @@ export class DocumentQueryService {
             receivedStepType: params.receivedStepType,
             drafterFilter: params.drafterFilter,
             referenceReadStatus: params.referenceReadStatus,
+            pendingStatusFilter: params.pendingStatusFilter,
         });
 
         // 추가 필터링 조건

@@ -135,7 +135,7 @@ export class DocumentController {
             '통계 조회와 동일한 필터로 실제 문서 목록을 조회합니다.\n\n' +
             '**필터 타입 (filterType):**\n' +
             '- DRAFT: 임시저장 (내가 임시 저장한 문서, DRAFT 상태)\n' +
-            '- PENDING: 결재 진행중 (내가 상신한 문서, PENDING 상태)\n' +
+            '- PENDING: 상신함 (내가 상신한 문서, DRAFT 제외 모든 상태)\n' +
             '- RECEIVED: 수신함 (내가 결재라인에 있지만 현재 내 차례가 아닌 문서)\n' +
             '  * 아직 내 차례가 아닌 것 (앞에 PENDING 단계 있음)\n' +
             '  * 이미 내가 처리한 것 (내 단계가 APPROVED)\n' +
@@ -150,6 +150,13 @@ export class DocumentController {
             '  * 내가 결재라인에 속했지만 반려된 문서\n' +
             '- RECEIVED_REFERENCE: 수신참조함 (내가 참조자로 있는 문서, IMPLEMENTED 상태만)\n' +
             '- 미지정: 내가 기안한 문서 + 내가 참여하는 문서 전체\n\n' +
+            '**상신함 문서 상태 필터 (pendingStatusFilter) - PENDING에만 적용:**\n' +
+            '- PENDING: 결재 진행중인 문서만\n' +
+            '- APPROVED: 결재 완료된 문서만\n' +
+            '- REJECTED: 반려된 문서만\n' +
+            '- CANCELLED: 취소된 문서만\n' +
+            '- IMPLEMENTED: 시행 완료된 문서만\n' +
+            '- 미지정: DRAFT를 제외한 모든 상태\n\n' +
             '**수신함 단계 타입 필터 (receivedStepType) - RECEIVED에만 적용:**\n' +
             '- AGREEMENT: 합의 단계로 수신한 문서만\n' +
             '- APPROVAL: 결재 단계로 수신한 문서만\n' +
@@ -171,6 +178,9 @@ export class DocumentController {
             '- ✅ 정상: 전체 문서 목록 조회 (filterType 없음)\n' +
             '- ✅ 정상: DRAFT 필터링\n' +
             '- ✅ 정상: PENDING 필터링\n' +
+            '- ✅ 정상: PENDING + pendingStatusFilter=PENDING 필터링\n' +
+            '- ✅ 정상: PENDING + pendingStatusFilter=APPROVED 필터링\n' +
+            '- ✅ 정상: PENDING + pendingStatusFilter=REJECTED 필터링\n' +
             '- ✅ 정상: RECEIVED 필터링\n' +
             '- ✅ 정상: PENDING_APPROVAL 필터링\n' +
             '- ✅ 정상: PENDING_AGREEMENT 필터링\n' +
@@ -202,6 +212,7 @@ export class DocumentController {
             receivedStepType: query.receivedStepType,
             drafterFilter: query.drafterFilter,
             referenceReadStatus: query.referenceReadStatus,
+            pendingStatusFilter: query.pendingStatusFilter,
             searchKeyword: query.searchKeyword,
             startDate: query.startDate ? new Date(query.startDate) : undefined,
             endDate: query.endDate ? new Date(query.endDate) : undefined,

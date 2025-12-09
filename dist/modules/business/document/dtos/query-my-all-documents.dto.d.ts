@@ -21,6 +21,13 @@ export declare enum ReferenceReadStatus {
     READ = "READ",
     UNREAD = "UNREAD"
 }
+export declare enum PendingStatusFilter {
+    PENDING = "PENDING",
+    APPROVED = "APPROVED",
+    REJECTED = "REJECTED",
+    CANCELLED = "CANCELLED",
+    IMPLEMENTED = "IMPLEMENTED"
+}
 export declare enum SortOrder {
     LATEST = "LATEST",
     OLDEST = "OLDEST"
@@ -30,6 +37,7 @@ export declare class QueryMyAllDocumentsDto {
     receivedStepType?: ReceivedStepType;
     drafterFilter?: DrafterFilter;
     referenceReadStatus?: ReferenceReadStatus;
+    pendingStatusFilter?: PendingStatusFilter;
     searchKeyword?: string;
     startDate?: string;
     endDate?: string;

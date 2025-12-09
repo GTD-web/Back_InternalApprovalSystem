@@ -407,7 +407,7 @@ export class ApprovalProcessContext {
         const hasNextProcessed = DocumentPolicyValidator.hasNextStepProcessed(step.stepOrder, document.approvalSteps);
         DocumentPolicyValidator.validateCancelApprovalOrThrow(step.status, hasNextProcessed);
 
-        // 6) 본인의 승인 단계를 PENDING으로 되돌림
+        // 6) 본인의 승인 단계를 PENDING으로 되돌림 및 승인일자 초기화
         step.대기한다();
         step.의견을설정한다(dto.reason || '');
         await this.approvalStepSnapshotService.save(step, { queryRunner });

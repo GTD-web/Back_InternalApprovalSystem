@@ -4,6 +4,8 @@ import { DocumentQueryService } from '../../../context/document/document-query.s
 import { TemplateContext } from '../../../context/template/template.context';
 import { ApprovalProcessContext } from '../../../context/approval-process/approval-process.context';
 import { NotificationContext } from '../../../context/notification/notification.context';
+import { DocumentNotificationService } from '../../../context/notification/document-notification.service';
+import { CommentNotificationService } from '../../../context/notification/comment-notification.service';
 import { CommentContext } from '../../../context/comment/comment.context';
 import {
     CreateDocumentDto,
@@ -39,6 +41,8 @@ export class DocumentService {
         private readonly approverMappingService: ApproverMappingService,
         private readonly approvalProcessContext: ApprovalProcessContext,
         private readonly notificationContext: NotificationContext,
+        private readonly documentNotificationService: DocumentNotificationService,
+        private readonly commentNotificationService: CommentNotificationService,
         private readonly commentContext: CommentContext,
     ) {}
 
@@ -268,8 +272,14 @@ export class DocumentService {
             }
 
             // 4) 알림 전송
-            await this.notificationContext.sendNotificationAfterSubmit({
-                document,
+            await this.documentNotificationService.sendNotificationAfterSubmit({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: drafter.name,
+                    status: document.status,
+                },
                 allSteps,
                 drafterEmployeeNumber: drafter.employeeNumber,
             });
@@ -312,6 +322,7 @@ export class DocumentService {
         receivedStepType?: string;
         drafterFilter?: string;
         referenceReadStatus?: string;
+        pendingStatusFilter?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;
@@ -342,12 +353,26 @@ export class DocumentService {
      */
     async createComment(documentId: string, dto: CreateCommentDto, authorId: string) {
         this.logger.log(`코멘트 작성: 문서 ${documentId}`);
-        return await this.commentContext.코멘트를작성한다({
+
+        const savedComment = await this.commentContext.코멘트를작성한다({
             documentId: documentId,
             authorId: authorId,
             content: dto.content,
             parentCommentId: dto.parentCommentId,
         });
+
+        // 알림 전송 (비동기, 실패해도 전체 프로세스에 영향 없음)
+        this.commentNotificationService
+            .sendCommentCreatedNotification({
+                documentId,
+                authorId,
+                commentContent: dto.content,
+            })
+            .catch((error) => {
+                this.logger.error('코멘트 작성 알림 전송 실패', error);
+            });
+
+        return savedComment;
     }
 
     /**
@@ -355,11 +380,25 @@ export class DocumentService {
      */
     async updateComment(commentId: string, dto: UpdateCommentDto, authorId: string) {
         this.logger.log(`코멘트 수정: ${commentId}`);
-        return await this.commentContext.코멘트를수정한다({
+
+        const updatedComment = await this.commentContext.코멘트를수정한다({
             commentId: commentId,
             authorId: authorId,
             content: dto.content,
         });
+
+        // 알림 전송 (비동기, 실패해도 전체 프로세스에 영향 없음)
+        this.commentNotificationService
+            .sendCommentUpdatedNotification({
+                documentId: updatedComment.documentId,
+                authorId,
+                commentContent: dto.content,
+            })
+            .catch((error) => {
+                this.logger.error('코멘트 수정 알림 전송 실패', error);
+            });
+
+        return updatedComment;
     }
 
     /**
@@ -367,7 +406,24 @@ export class DocumentService {
      */
     async deleteComment(commentId: string, authorId: string) {
         this.logger.log(`코멘트 삭제: ${commentId}`);
-        return await this.commentContext.코멘트를삭제한다(commentId, authorId);
+
+        // 삭제 전 코멘트 정보 조회 (documentId 필요)
+        const comment = await this.commentContext.코멘트를조회한다(commentId);
+        const documentId = comment.documentId;
+
+        const deletedComment = await this.commentContext.코멘트를삭제한다(commentId, authorId);
+
+        // 알림 전송 (비동기, 실패해도 전체 프로세스에 영향 없음)
+        this.commentNotificationService
+            .sendCommentDeletedNotification({
+                documentId,
+                authorId,
+            })
+            .catch((error) => {
+                this.logger.error('코멘트 삭제 알림 전송 실패', error);
+            });
+
+        return deletedComment;
     }
 
     /**
