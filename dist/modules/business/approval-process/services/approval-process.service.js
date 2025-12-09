@@ -16,15 +16,15 @@ const typeorm_1 = require("typeorm");
 const approval_process_context_1 = require("../../../context/approval-process/approval-process.context");
 const document_context_1 = require("../../../context/document/document.context");
 const document_query_service_1 = require("../../../context/document/document-query.service");
-const notification_context_1 = require("../../../context/notification/notification.context");
+const document_notification_service_1 = require("../../../context/notification/document-notification.service");
 const transaction_util_1 = require("../../../../common/utils/transaction.util");
 let ApprovalProcessService = ApprovalProcessService_1 = class ApprovalProcessService {
-    constructor(dataSource, approvalProcessContext, documentContext, documentQueryService, notificationContext) {
+    constructor(dataSource, approvalProcessContext, documentContext, documentQueryService, documentNotificationService) {
         this.dataSource = dataSource;
         this.approvalProcessContext = approvalProcessContext;
         this.documentContext = documentContext;
         this.documentQueryService = documentQueryService;
-        this.notificationContext = notificationContext;
+        this.documentNotificationService = documentNotificationService;
         this.logger = new common_1.Logger(ApprovalProcessService_1.name);
     }
     async approveStep(dto, approverId) {
@@ -111,8 +111,14 @@ let ApprovalProcessService = ApprovalProcessService_1 = class ApprovalProcessSer
         try {
             const document = await this.documentQueryService.getDocument(documentId);
             const allSteps = await this.approvalProcessContext.getApprovalStepsByDocumentId(documentId);
-            await this.notificationContext.sendNotificationAfterApprove({
-                document,
+            await this.documentNotificationService.sendNotificationAfterApprove({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: document.drafter?.name,
+                    status: document.status,
+                },
                 allSteps,
                 currentStepId,
                 approverEmployeeNumber,
@@ -126,8 +132,14 @@ let ApprovalProcessService = ApprovalProcessService_1 = class ApprovalProcessSer
     async sendRejectNotification(documentId, rejectReason, rejecterEmployeeNumber) {
         try {
             const document = await this.documentQueryService.getDocument(documentId);
-            await this.notificationContext.sendNotificationAfterReject({
-                document,
+            await this.documentNotificationService.sendNotificationAfterReject({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: document.drafter?.name,
+                    status: document.status,
+                },
                 rejectReason,
                 rejecterEmployeeNumber,
             });
@@ -141,8 +153,14 @@ let ApprovalProcessService = ApprovalProcessService_1 = class ApprovalProcessSer
         try {
             const document = await this.documentQueryService.getDocument(documentId);
             const allSteps = await this.approvalProcessContext.getApprovalStepsByDocumentId(documentId);
-            await this.notificationContext.sendNotificationAfterCompleteAgreement({
-                document,
+            await this.documentNotificationService.sendNotificationAfterCompleteAgreement({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: document.drafter?.name,
+                    status: document.status,
+                },
                 allSteps,
                 agreerEmployeeNumber,
             });
@@ -156,8 +174,14 @@ let ApprovalProcessService = ApprovalProcessService_1 = class ApprovalProcessSer
         try {
             const document = await this.documentQueryService.getDocument(documentId);
             const allSteps = await this.approvalProcessContext.getApprovalStepsByDocumentId(documentId);
-            await this.notificationContext.sendNotificationAfterCompleteImplementation({
-                document,
+            await this.documentNotificationService.sendNotificationAfterCompleteImplementation({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: document.drafter?.name,
+                    status: document.status,
+                },
                 allSteps,
                 implementerEmployeeNumber,
             });
@@ -175,6 +199,6 @@ exports.ApprovalProcessService = ApprovalProcessService = ApprovalProcessService
         approval_process_context_1.ApprovalProcessContext,
         document_context_1.DocumentContext,
         document_query_service_1.DocumentQueryService,
-        notification_context_1.NotificationContext])
+        document_notification_service_1.DocumentNotificationService])
 ], ApprovalProcessService);
 //# sourceMappingURL=approval-process.service.js.map

@@ -1,7 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DomainCommentService } from '../../domain/comment/comment.service';
 import { DomainDocumentService } from '../../domain/document/document.service';
 import { DomainEmployeeService } from '../../domain/employee/employee.service';
+import { DomainApprovalStepSnapshotService } from '../../domain/approval-step-snapshot/approval-step-snapshot.service';
+import { ApprovalStepType } from '../../../common/enums/approval.enum';
 
 /**
  * 코멘트 컨텍스트
@@ -18,10 +20,12 @@ export class CommentContext {
         private readonly commentService: DomainCommentService,
         private readonly documentService: DomainDocumentService,
         private readonly employeeService: DomainEmployeeService,
+        private readonly approvalStepSnapshotService: DomainApprovalStepSnapshotService,
     ) {}
 
     /**
      * 코멘트를 작성한다
+     * 해당 문서의 합의자(AGREEMENT) 또는 결재자(APPROVAL)만 코멘트 작성 가능
      */
     async 코멘트를작성한다(params: {
         documentId: string;
@@ -41,7 +45,22 @@ export class CommentContext {
             where: { id: params.authorId },
         });
 
-        // 3. 부모 코멘트 확인 (대댓글인 경우)
+        // 3. 코멘트 작성 권한 확인 (합의자 또는 결재자만 가능)
+        const approvalSteps = await this.approvalStepSnapshotService.findAll({
+            where: { documentId: params.documentId },
+        });
+
+        const isAuthorized = approvalSteps.some(
+            (step) =>
+                step.approverId === params.authorId &&
+                (step.stepType === ApprovalStepType.AGREEMENT || step.stepType === ApprovalStepType.APPROVAL),
+        );
+
+        if (!isAuthorized) {
+            throw new ForbiddenException('해당 문서의 합의자 또는 결재자만 코멘트를 작성할 수 있습니다');
+        }
+
+        // 4. 부모 코멘트 확인 (대댓글인 경우)
         if (params.parentCommentId) {
             const parentComment = await this.commentService.findOneWithError({
                 where: { id: params.parentCommentId },
@@ -53,7 +72,7 @@ export class CommentContext {
             }
         }
 
-        // 4. 코멘트 생성 (도메인 서비스 사용)
+        // 5. 코멘트 생성 (도메인 서비스 사용)
         const savedComment = await this.commentService.createComment(params);
 
         this.logger.log(`코멘트 작성 완료: ${savedComment.id}`);

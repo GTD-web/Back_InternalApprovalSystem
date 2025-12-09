@@ -17,6 +17,8 @@ const document_query_service_1 = require("../../../context/document/document-que
 const template_context_1 = require("../../../context/template/template.context");
 const approval_process_context_1 = require("../../../context/approval-process/approval-process.context");
 const notification_context_1 = require("../../../context/notification/notification.context");
+const document_notification_service_1 = require("../../../context/notification/document-notification.service");
+const comment_notification_service_1 = require("../../../context/notification/comment-notification.service");
 const comment_context_1 = require("../../../context/comment/comment.context");
 const approval_enum_1 = require("../../../../common/enums/approval.enum");
 const transaction_util_1 = require("../../../../common/utils/transaction.util");
@@ -24,7 +26,7 @@ const typeorm_1 = require("typeorm");
 const approver_mapping_service_1 = require("../../../context/template/approver-mapping.service");
 const document_policy_validator_1 = require("../../../../common/utils/document-policy.validator");
 let DocumentService = DocumentService_1 = class DocumentService {
-    constructor(dataSource, documentContext, documentQueryService, templateContext, approverMappingService, approvalProcessContext, notificationContext, commentContext) {
+    constructor(dataSource, documentContext, documentQueryService, templateContext, approverMappingService, approvalProcessContext, notificationContext, documentNotificationService, commentNotificationService, commentContext) {
         this.dataSource = dataSource;
         this.documentContext = documentContext;
         this.documentQueryService = documentQueryService;
@@ -32,6 +34,8 @@ let DocumentService = DocumentService_1 = class DocumentService {
         this.approverMappingService = approverMappingService;
         this.approvalProcessContext = approvalProcessContext;
         this.notificationContext = notificationContext;
+        this.documentNotificationService = documentNotificationService;
+        this.commentNotificationService = commentNotificationService;
         this.commentContext = commentContext;
         this.logger = new common_1.Logger(DocumentService_1.name);
     }
@@ -162,8 +166,14 @@ let DocumentService = DocumentService_1 = class DocumentService {
                 this.logger.warn(`기안자 정보를 찾을 수 없습니다: ${drafterId}`);
                 return;
             }
-            await this.notificationContext.sendNotificationAfterSubmit({
-                document,
+            await this.documentNotificationService.sendNotificationAfterSubmit({
+                document: {
+                    id: document.id,
+                    title: document.title,
+                    drafterId: document.drafterId,
+                    drafterName: drafter.name,
+                    status: document.status,
+                },
                 allSteps,
                 drafterEmployeeNumber: drafter.employeeNumber,
             });
@@ -195,24 +205,55 @@ let DocumentService = DocumentService_1 = class DocumentService {
     }
     async createComment(documentId, dto, authorId) {
         this.logger.log(`코멘트 작성: 문서 ${documentId}`);
-        return await this.commentContext.코멘트를작성한다({
+        const savedComment = await this.commentContext.코멘트를작성한다({
             documentId: documentId,
             authorId: authorId,
             content: dto.content,
             parentCommentId: dto.parentCommentId,
         });
+        this.commentNotificationService
+            .sendCommentCreatedNotification({
+            documentId,
+            authorId,
+            commentContent: dto.content,
+        })
+            .catch((error) => {
+            this.logger.error('코멘트 작성 알림 전송 실패', error);
+        });
+        return savedComment;
     }
     async updateComment(commentId, dto, authorId) {
         this.logger.log(`코멘트 수정: ${commentId}`);
-        return await this.commentContext.코멘트를수정한다({
+        const updatedComment = await this.commentContext.코멘트를수정한다({
             commentId: commentId,
             authorId: authorId,
             content: dto.content,
         });
+        this.commentNotificationService
+            .sendCommentUpdatedNotification({
+            documentId: updatedComment.documentId,
+            authorId,
+            commentContent: dto.content,
+        })
+            .catch((error) => {
+            this.logger.error('코멘트 수정 알림 전송 실패', error);
+        });
+        return updatedComment;
     }
     async deleteComment(commentId, authorId) {
         this.logger.log(`코멘트 삭제: ${commentId}`);
-        return await this.commentContext.코멘트를삭제한다(commentId, authorId);
+        const comment = await this.commentContext.코멘트를조회한다(commentId);
+        const documentId = comment.documentId;
+        const deletedComment = await this.commentContext.코멘트를삭제한다(commentId, authorId);
+        this.commentNotificationService
+            .sendCommentDeletedNotification({
+            documentId,
+            authorId,
+        })
+            .catch((error) => {
+            this.logger.error('코멘트 삭제 알림 전송 실패', error);
+        });
+        return deletedComment;
     }
     async getDocumentComments(documentId) {
         this.logger.debug(`문서 코멘트 조회: ${documentId}`);
@@ -279,6 +320,8 @@ exports.DocumentService = DocumentService = DocumentService_1 = __decorate([
         approver_mapping_service_1.ApproverMappingService,
         approval_process_context_1.ApprovalProcessContext,
         notification_context_1.NotificationContext,
+        document_notification_service_1.DocumentNotificationService,
+        comment_notification_service_1.CommentNotificationService,
         comment_context_1.CommentContext])
 ], DocumentService);
 //# sourceMappingURL=document.service.js.map

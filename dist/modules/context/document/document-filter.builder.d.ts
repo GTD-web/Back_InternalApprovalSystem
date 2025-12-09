@@ -5,6 +5,7 @@ export declare class DocumentFilterBuilder {
         receivedStepType?: string;
         drafterFilter?: string;
         referenceReadStatus?: string;
+        pendingStatusFilter?: string;
     }): void;
     private applyDraftFilter;
     private applyPendingFilter;

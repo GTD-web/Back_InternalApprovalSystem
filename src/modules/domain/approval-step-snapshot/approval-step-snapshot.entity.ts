@@ -128,13 +128,16 @@ export class ApprovalStepSnapshot {
 
     반려한다(): void {
         this.status = ApprovalStatus.REJECTED;
+        this.approvedAt = new Date();
     }
 
     대기한다(): void {
         this.status = ApprovalStatus.PENDING;
+        this.approvedAt = null;
     }
 
     취소한다(): void {
         this.status = ApprovalStatus.CANCELLED;
+        this.approvedAt = null;
     }
 }

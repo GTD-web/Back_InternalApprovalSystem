@@ -44,7 +44,6 @@ let NotificationService = NotificationService_1 = class NotificationService {
         }
         this.validateRequest(dto);
         const url = `${this.baseUrl}${notification_constants_1.NOTIFICATION_ENDPOINTS.SEND}`;
-        console.log(url);
         this.logger.debug(`알림 전송 요청: ${dto.recipients.length}명, 제목: ${dto.title}`);
         try {
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.post(url, dto, {

@@ -24,6 +24,7 @@ export class DocumentFilterBuilder {
             receivedStepType?: string;
             drafterFilter?: string;
             referenceReadStatus?: string;
+            pendingStatusFilter?: string;
         },
     ): void {
         switch (filterType) {
@@ -32,7 +33,7 @@ export class DocumentFilterBuilder {
                 break;
 
             case 'PENDING':
-                this.applyPendingFilter(qb, userId);
+                this.applyPendingFilter(qb, userId, options?.pendingStatusFilter);
                 break;
 
             case 'RECEIVED':
@@ -80,12 +81,33 @@ export class DocumentFilterBuilder {
     }
 
     /**
-     * 결재 진행중 필터 (내가 상신한 문서 - DRAFT 제외한 모든 상태)
+     * 상신함 필터 (내가 상신한 문서 - DRAFT 제외한 모든 상태 또는 특정 상태)
+     * @param pendingStatusFilter - 특정 문서 상태로 필터링 (PENDING, APPROVED, REJECTED, CANCELLED, IMPLEMENTED)
      */
-    private applyPendingFilter(qb: SelectQueryBuilder<Document>, userId: string): void {
-        qb.andWhere('document.drafterId = :userId', { userId }).andWhere('document.status != :draftStatus', {
-            draftStatus: DocumentStatus.DRAFT,
-        });
+    private applyPendingFilter(qb: SelectQueryBuilder<Document>, userId: string, pendingStatusFilter?: string): void {
+        qb.andWhere('document.drafterId = :userId', { userId });
+
+        if (pendingStatusFilter) {
+            // 특정 상태로 필터링
+            const statusMap: Record<string, DocumentStatus> = {
+                PENDING: DocumentStatus.PENDING,
+                APPROVED: DocumentStatus.APPROVED,
+                REJECTED: DocumentStatus.REJECTED,
+                CANCELLED: DocumentStatus.CANCELLED,
+                IMPLEMENTED: DocumentStatus.IMPLEMENTED,
+            };
+
+            const targetStatus = statusMap[pendingStatusFilter];
+            if (targetStatus) {
+                qb.andWhere('document.status = :targetStatus', { targetStatus });
+            } else {
+                // 유효하지 않은 상태는 DRAFT 제외로 fallback
+                qb.andWhere('document.status != :draftStatus', { draftStatus: DocumentStatus.DRAFT });
+            }
+        } else {
+            // 기본: DRAFT 제외한 모든 상태
+            qb.andWhere('document.status != :draftStatus', { draftStatus: DocumentStatus.DRAFT });
+        }
     }
 
     /**
@@ -96,9 +118,7 @@ export class DocumentFilterBuilder {
      * 합의(AGREEMENT)와 결재(APPROVAL)만 포함, 시행(IMPLEMENTATION)과 참조(REFERENCE)는 제외
      */
     private applyReceivedFilter(qb: SelectQueryBuilder<Document>, userId: string, receivedStepType?: string): void {
-        const receivedStepTypes = receivedStepType
-            ? [receivedStepType === 'AGREEMENT' ? ApprovalStepType.AGREEMENT : ApprovalStepType.APPROVAL]
-            : [ApprovalStepType.AGREEMENT, ApprovalStepType.APPROVAL];
+        const receivedStepTypes = [ApprovalStepType.APPROVAL];
 
         qb.andWhere('document.drafterId != :userId', { userId })
             .andWhere('document.status = :pendingStatus', { pendingStatus: DocumentStatus.PENDING })
@@ -134,7 +154,7 @@ export class DocumentFilterBuilder {
     }
 
     /**
-     * 합의함 필터 (현재 내가 협의해야 하는 문서)
+     * 합의함 필터 (현재 내가 합의해야 하는 문서)
      */
     private applyPendingAgreementFilter(qb: SelectQueryBuilder<Document>, userId: string): void {
         qb.andWhere('document.drafterId != :userId', { userId }).andWhere(
@@ -146,19 +166,16 @@ export class DocumentFilterBuilder {
                 AND my_step."stepType" = :agreementType
                 AND d.status = :pendingStatus
                 AND d."drafterId" != :userId
-                AND my_step.status = :pendingStepStatus
                 AND NOT EXISTS (
                     SELECT 1
                     FROM approval_step_snapshots prior_step
                     WHERE prior_step."documentId" = my_step."documentId"
                     AND prior_step."stepOrder" < my_step."stepOrder"
-                    AND prior_step.status = :pendingStepStatus
                 )
             )`,
             {
                 pendingStatus: DocumentStatus.PENDING,
                 agreementType: ApprovalStepType.AGREEMENT,
-                pendingStepStatus: ApprovalStatus.PENDING,
             },
         );
     }
@@ -223,49 +240,19 @@ export class DocumentFilterBuilder {
      * - drafterFilter로 내가 기안한 것 또는 참여한 것만 필터링 가능
      */
     private applyApprovedFilter(qb: SelectQueryBuilder<Document>, userId: string, drafterFilter?: string): void {
-        if (drafterFilter === 'MY_DRAFT') {
-            // 내가 기안한 문서만
-            qb.andWhere('document.drafterId = :userId', { userId }).andWhere(
-                'document.status IN (:...completedStatuses)',
-                {
-                    completedStatuses: [DocumentStatus.APPROVED, DocumentStatus.IMPLEMENTED],
-                },
-            );
-        } else if (drafterFilter === 'PARTICIPATED') {
-            // 내가 참여한 문서만 (기안자가 아닌 경우)
-            qb.andWhere('document.drafterId != :userId', { userId }).andWhere(
-                `document.id IN (
-                    SELECT DISTINCT d.id
-                    FROM documents d
-                    INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
-                    WHERE ass."approverId" = :userId
-                    AND d.status IN (:...completedStatuses)
-                )`,
-                {
-                    completedStatuses: [DocumentStatus.APPROVED, DocumentStatus.IMPLEMENTED],
-                },
-            );
-        } else {
-            // 기본: 모든 문서 (기안 + 참여)
-            qb.andWhere(
-                `(
-                    (document.drafterId = :userId AND document.status IN (:...completedStatuses))
-                    OR
-                    (document.drafterId != :userId AND document.id IN (
-                        SELECT DISTINCT d.id
-                        FROM documents d
-                        INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
-                        WHERE ass."approverId" = :userId
-                        AND d.status IN (:...completedStatuses2)
-                    ))
-                )`,
-                {
-                    userId,
-                    completedStatuses: [DocumentStatus.APPROVED, DocumentStatus.IMPLEMENTED],
-                    completedStatuses2: [DocumentStatus.APPROVED, DocumentStatus.IMPLEMENTED],
-                },
-            );
-        }
+        // 내가 참여한 문서만 (기안자가 아닌 경우)
+        qb.andWhere('document.drafterId != :userId', { userId }).andWhere(
+            `document.id IN (
+                SELECT DISTINCT d.id
+                FROM documents d
+                INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
+                WHERE ass."approverId" = :userId
+                AND d.status IN (:...completedStatuses)
+            )`,
+            {
+                completedStatuses: [DocumentStatus.APPROVED, DocumentStatus.IMPLEMENTED],
+            },
+        );
     }
 
     /**
@@ -273,46 +260,19 @@ export class DocumentFilterBuilder {
      * - drafterFilter로 내가 기안한 것 또는 참여한 것만 필터링 가능
      */
     private applyRejectedFilter(qb: SelectQueryBuilder<Document>, userId: string, drafterFilter?: string): void {
-        if (drafterFilter === 'MY_DRAFT') {
-            // 내가 기안한 문서만
-            qb.andWhere('document.drafterId = :userId', { userId }).andWhere('document.status = :rejectedStatus', {
+        // 내가 참여한 문서만 (기안자가 아닌 경우)
+        qb.andWhere('document.drafterId != :userId', { userId }).andWhere(
+            `document.id IN (
+                SELECT DISTINCT d.id
+                FROM documents d
+                INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
+                WHERE ass."approverId" = :userId
+                AND d.status = :rejectedStatus
+            )`,
+            {
                 rejectedStatus: DocumentStatus.REJECTED,
-            });
-        } else if (drafterFilter === 'PARTICIPATED') {
-            // 내가 참여한 문서만 (기안자가 아닌 경우)
-            qb.andWhere('document.drafterId != :userId', { userId }).andWhere(
-                `document.id IN (
-                    SELECT DISTINCT d.id
-                    FROM documents d
-                    INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
-                    WHERE ass."approverId" = :userId
-                    AND d.status = :rejectedStatus
-                )`,
-                {
-                    rejectedStatus: DocumentStatus.REJECTED,
-                },
-            );
-        } else {
-            // 기본: 모든 문서 (기안 + 참여)
-            qb.andWhere(
-                `(
-                    (document.drafterId = :userId AND document.status = :rejectedStatus)
-                    OR
-                    (document.drafterId != :userId AND document.id IN (
-                        SELECT DISTINCT d.id
-                        FROM documents d
-                        INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
-                        WHERE ass."approverId" = :userId
-                        AND d.status = :rejectedStatus2
-                    ))
-                )`,
-                {
-                    userId,
-                    rejectedStatus: DocumentStatus.REJECTED,
-                    rejectedStatus2: DocumentStatus.REJECTED,
-                },
-            );
-        }
+            },
+        );
     }
 
     /**

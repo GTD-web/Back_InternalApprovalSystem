@@ -16,7 +16,7 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
                 this.applyDraftFilter(qb, userId);
                 break;
             case 'PENDING':
-                this.applyPendingFilter(qb, userId);
+                this.applyPendingFilter(qb, userId, options?.pendingStatusFilter);
                 break;
             case 'RECEIVED':
                 this.applyReceivedFilter(qb, userId, options?.receivedStepType);
@@ -50,15 +50,30 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
             status: approval_enum_1.DocumentStatus.DRAFT,
         });
     }
-    applyPendingFilter(qb, userId) {
-        qb.andWhere('document.drafterId = :userId', { userId }).andWhere('document.status != :draftStatus', {
-            draftStatus: approval_enum_1.DocumentStatus.DRAFT,
-        });
+    applyPendingFilter(qb, userId, pendingStatusFilter) {
+        qb.andWhere('document.drafterId = :userId', { userId });
+        if (pendingStatusFilter) {
+            const statusMap = {
+                PENDING: approval_enum_1.DocumentStatus.PENDING,
+                APPROVED: approval_enum_1.DocumentStatus.APPROVED,
+                REJECTED: approval_enum_1.DocumentStatus.REJECTED,
+                CANCELLED: approval_enum_1.DocumentStatus.CANCELLED,
+                IMPLEMENTED: approval_enum_1.DocumentStatus.IMPLEMENTED,
+            };
+            const targetStatus = statusMap[pendingStatusFilter];
+            if (targetStatus) {
+                qb.andWhere('document.status = :targetStatus', { targetStatus });
+            }
+            else {
+                qb.andWhere('document.status != :draftStatus', { draftStatus: approval_enum_1.DocumentStatus.DRAFT });
+            }
+        }
+        else {
+            qb.andWhere('document.status != :draftStatus', { draftStatus: approval_enum_1.DocumentStatus.DRAFT });
+        }
     }
     applyReceivedFilter(qb, userId, receivedStepType) {
-        const receivedStepTypes = receivedStepType
-            ? [receivedStepType === 'AGREEMENT' ? approval_enum_1.ApprovalStepType.AGREEMENT : approval_enum_1.ApprovalStepType.APPROVAL]
-            : [approval_enum_1.ApprovalStepType.AGREEMENT, approval_enum_1.ApprovalStepType.APPROVAL];
+        const receivedStepTypes = [approval_enum_1.ApprovalStepType.APPROVAL];
         qb.andWhere('document.drafterId != :userId', { userId })
             .andWhere('document.status = :pendingStatus', { pendingStatus: approval_enum_1.DocumentStatus.PENDING })
             .andWhere(`document.id IN (
@@ -97,18 +112,15 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
                 AND my_step."stepType" = :agreementType
                 AND d.status = :pendingStatus
                 AND d."drafterId" != :userId
-                AND my_step.status = :pendingStepStatus
                 AND NOT EXISTS (
                     SELECT 1
                     FROM approval_step_snapshots prior_step
                     WHERE prior_step."documentId" = my_step."documentId"
                     AND prior_step."stepOrder" < my_step."stepOrder"
-                    AND prior_step.status = :pendingStepStatus
                 )
             )`, {
             pendingStatus: approval_enum_1.DocumentStatus.PENDING,
             agreementType: approval_enum_1.ApprovalStepType.AGREEMENT,
-            pendingStepStatus: approval_enum_1.ApprovalStatus.PENDING,
         });
     }
     applyPendingApprovalFilter(qb, userId) {
@@ -151,74 +163,26 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
         });
     }
     applyApprovedFilter(qb, userId, drafterFilter) {
-        if (drafterFilter === 'MY_DRAFT') {
-            qb.andWhere('document.drafterId = :userId', { userId }).andWhere('document.status IN (:...completedStatuses)', {
-                completedStatuses: [approval_enum_1.DocumentStatus.APPROVED, approval_enum_1.DocumentStatus.IMPLEMENTED],
-            });
-        }
-        else if (drafterFilter === 'PARTICIPATED') {
-            qb.andWhere('document.drafterId != :userId', { userId }).andWhere(`document.id IN (
-                    SELECT DISTINCT d.id
-                    FROM documents d
-                    INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
-                    WHERE ass."approverId" = :userId
-                    AND d.status IN (:...completedStatuses)
-                )`, {
-                completedStatuses: [approval_enum_1.DocumentStatus.APPROVED, approval_enum_1.DocumentStatus.IMPLEMENTED],
-            });
-        }
-        else {
-            qb.andWhere(`(
-                    (document.drafterId = :userId AND document.status IN (:...completedStatuses))
-                    OR
-                    (document.drafterId != :userId AND document.id IN (
-                        SELECT DISTINCT d.id
-                        FROM documents d
-                        INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
-                        WHERE ass."approverId" = :userId
-                        AND d.status IN (:...completedStatuses2)
-                    ))
-                )`, {
-                userId,
-                completedStatuses: [approval_enum_1.DocumentStatus.APPROVED, approval_enum_1.DocumentStatus.IMPLEMENTED],
-                completedStatuses2: [approval_enum_1.DocumentStatus.APPROVED, approval_enum_1.DocumentStatus.IMPLEMENTED],
-            });
-        }
+        qb.andWhere('document.drafterId != :userId', { userId }).andWhere(`document.id IN (
+                SELECT DISTINCT d.id
+                FROM documents d
+                INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
+                WHERE ass."approverId" = :userId
+                AND d.status IN (:...completedStatuses)
+            )`, {
+            completedStatuses: [approval_enum_1.DocumentStatus.APPROVED, approval_enum_1.DocumentStatus.IMPLEMENTED],
+        });
     }
     applyRejectedFilter(qb, userId, drafterFilter) {
-        if (drafterFilter === 'MY_DRAFT') {
-            qb.andWhere('document.drafterId = :userId', { userId }).andWhere('document.status = :rejectedStatus', {
-                rejectedStatus: approval_enum_1.DocumentStatus.REJECTED,
-            });
-        }
-        else if (drafterFilter === 'PARTICIPATED') {
-            qb.andWhere('document.drafterId != :userId', { userId }).andWhere(`document.id IN (
-                    SELECT DISTINCT d.id
-                    FROM documents d
-                    INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
-                    WHERE ass."approverId" = :userId
-                    AND d.status = :rejectedStatus
-                )`, {
-                rejectedStatus: approval_enum_1.DocumentStatus.REJECTED,
-            });
-        }
-        else {
-            qb.andWhere(`(
-                    (document.drafterId = :userId AND document.status = :rejectedStatus)
-                    OR
-                    (document.drafterId != :userId AND document.id IN (
-                        SELECT DISTINCT d.id
-                        FROM documents d
-                        INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
-                        WHERE ass."approverId" = :userId
-                        AND d.status = :rejectedStatus2
-                    ))
-                )`, {
-                userId,
-                rejectedStatus: approval_enum_1.DocumentStatus.REJECTED,
-                rejectedStatus2: approval_enum_1.DocumentStatus.REJECTED,
-            });
-        }
+        qb.andWhere('document.drafterId != :userId', { userId }).andWhere(`document.id IN (
+                SELECT DISTINCT d.id
+                FROM documents d
+                INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
+                WHERE ass."approverId" = :userId
+                AND d.status = :rejectedStatus
+            )`, {
+            rejectedStatus: approval_enum_1.DocumentStatus.REJECTED,
+        });
     }
     applyReceivedReferenceFilter(qb, userId, referenceReadStatus) {
         qb.andWhere('document.drafterId != :userId', { userId }).andWhere('document.status = :implementedStatus', {
