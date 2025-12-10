@@ -409,7 +409,18 @@ export class ApprovalProcessContext {
 
         // 6) 본인의 승인 단계를 PENDING으로 되돌림 및 승인일자 초기화
         step.대기한다();
-        step.의견을설정한다(dto.reason || '');
+
+        // 7) 취소 사유를 Comment 엔티티로 생성
+        if (dto.reason) {
+            await this.commentService.createComment(
+                {
+                    documentId: step.documentId,
+                    authorId: dto.approverId,
+                    content: dto.reason,
+                },
+                queryRunner,
+            );
+        }
         await this.approvalStepSnapshotService.save(step, { queryRunner });
 
         this.logger.log(`결재 취소 완료: ${dto.stepSnapshotId}, 결재자: ${dto.approverId}`);

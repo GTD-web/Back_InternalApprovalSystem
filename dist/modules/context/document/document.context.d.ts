@@ -6,6 +6,7 @@ import { DomainEmployeeService } from '../../domain/employee/employee.service';
 import { DomainApprovalStepSnapshotService } from '../../domain/approval-step-snapshot/approval-step-snapshot.service';
 import { CreateDocumentDto, UpdateDocumentDto, SubmitDocumentDto, CancelSubmitDto } from './dtos/document.dto';
 import { DocumentStatus } from '../../../common/enums/approval.enum';
+import { DomainCommentService } from '../../domain/comment/comment.service';
 export interface DocumentModificationHistoryItem {
     previousTitle: string;
     previousContent: string;
@@ -19,8 +20,9 @@ export declare class DocumentContext {
     private readonly documentTemplateService;
     private readonly employeeService;
     private readonly approvalStepSnapshotService;
+    private readonly commentService;
     private readonly logger;
-    constructor(dataSource: DataSource, documentService: DomainDocumentService, documentTemplateService: DomainDocumentTemplateService, employeeService: DomainEmployeeService, approvalStepSnapshotService: DomainApprovalStepSnapshotService);
+    constructor(dataSource: DataSource, documentService: DomainDocumentService, documentTemplateService: DomainDocumentTemplateService, employeeService: DomainEmployeeService, approvalStepSnapshotService: DomainApprovalStepSnapshotService, commentService: DomainCommentService);
     createDocument(dto: CreateDocumentDto, queryRunner?: QueryRunner): Promise<Document>;
     updateDocument(documentId: string, dto: UpdateDocumentDto, queryRunner?: QueryRunner): Promise<Document>;
     deleteDocument(documentId: string, externalQueryRunner?: QueryRunner): Promise<{
