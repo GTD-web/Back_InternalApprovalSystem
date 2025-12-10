@@ -10,6 +10,7 @@ import { DocumentStatus, ApprovalStepType, ApprovalStatus } from '../../../commo
 import { withTransaction } from '../../../common/utils/transaction.util';
 import { ApproverSnapshotMetadata } from '../../domain/approval-step-snapshot/approval-step-snapshot.entity';
 import { DocumentPolicyValidator } from '../../../common/utils/document-policy.validator';
+import { DomainCommentService } from '../../domain/comment/comment.service';
 
 /**
  * 문서 수정 이력 항목 인터페이스
@@ -45,6 +46,7 @@ export class DocumentContext {
         private readonly documentTemplateService: DomainDocumentTemplateService,
         private readonly employeeService: DomainEmployeeService,
         private readonly approvalStepSnapshotService: DomainApprovalStepSnapshotService,
+        private readonly commentService: DomainCommentService,
     ) {}
 
     // ============================================
@@ -230,6 +232,15 @@ export class DocumentContext {
 
         // 5) Document 상태를 CANCELLED로 변경
         document.취소한다(dto.reason);
+        // 8) 반려 사유를 Comment 엔티티로 생성
+        await this.commentService.createComment(
+            {
+                documentId: document.id,
+                authorId: dto.drafterId,
+                content: dto.reason,
+            },
+            queryRunner,
+        );
 
         const cancelledDocument = await this.documentService.save(document, { queryRunner });
 

@@ -50,7 +50,7 @@ export abstract class BaseService<T extends ObjectLiteral> implements IService<T
     async findOneWithError(options: IRepositoryOptions<T>): Promise<T> {
         const entity = await this.findOne(options);
         if (!entity) {
-            throw new NotFoundException(`${this.repository.constructor.name}를 찾을 수 없습니다.`);
+            throw new NotFoundException(`${this.repository['repository'].target.name}를 찾을 수 없습니다.`);
         }
         return entity;
     }
@@ -58,7 +58,7 @@ export abstract class BaseService<T extends ObjectLiteral> implements IService<T
     async findAllWithError(options: IRepositoryOptions<T>): Promise<T[]> {
         const entities = await this.findAll(options);
         if (entities.length === 0) {
-            throw new NotFoundException(`${this.repository.constructor.name} 목록을 찾을 수 없습니다.`);
+            throw new NotFoundException(`${this.repository['repository'].target.name} 목록을 찾을 수 없습니다.`);
         }
         return entities;
     }

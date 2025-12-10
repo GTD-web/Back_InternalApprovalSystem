@@ -221,7 +221,13 @@ let ApprovalProcessContext = ApprovalProcessContext_1 = class ApprovalProcessCon
         const hasNextProcessed = document_policy_validator_1.DocumentPolicyValidator.hasNextStepProcessed(step.stepOrder, document.approvalSteps);
         document_policy_validator_1.DocumentPolicyValidator.validateCancelApprovalOrThrow(step.status, hasNextProcessed);
         step.대기한다();
-        step.의견을설정한다(dto.reason || '');
+        if (dto.reason) {
+            await this.commentService.createComment({
+                documentId: step.documentId,
+                authorId: dto.approverId,
+                content: dto.reason,
+            }, queryRunner);
+        }
         await this.approvalStepSnapshotService.save(step, { queryRunner });
         this.logger.log(`결재 취소 완료: ${dto.stepSnapshotId}, 결재자: ${dto.approverId}`);
         return {

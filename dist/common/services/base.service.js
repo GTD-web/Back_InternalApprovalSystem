@@ -45,14 +45,14 @@ let BaseService = class BaseService {
     async findOneWithError(options) {
         const entity = await this.findOne(options);
         if (!entity) {
-            throw new common_1.NotFoundException(`${this.repository.constructor.name}를 찾을 수 없습니다.`);
+            throw new common_1.NotFoundException(`${this.repository['repository'].target.name}를 찾을 수 없습니다.`);
         }
         return entity;
     }
     async findAllWithError(options) {
         const entities = await this.findAll(options);
         if (entities.length === 0) {
-            throw new common_1.NotFoundException(`${this.repository.constructor.name} 목록을 찾을 수 없습니다.`);
+            throw new common_1.NotFoundException(`${this.repository['repository'].target.name} 목록을 찾을 수 없습니다.`);
         }
         return entities;
     }

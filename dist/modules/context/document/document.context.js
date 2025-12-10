@@ -20,13 +20,15 @@ const approval_step_snapshot_service_1 = require("../../domain/approval-step-sna
 const approval_enum_1 = require("../../../common/enums/approval.enum");
 const transaction_util_1 = require("../../../common/utils/transaction.util");
 const document_policy_validator_1 = require("../../../common/utils/document-policy.validator");
+const comment_service_1 = require("../../domain/comment/comment.service");
 let DocumentContext = DocumentContext_1 = class DocumentContext {
-    constructor(dataSource, documentService, documentTemplateService, employeeService, approvalStepSnapshotService) {
+    constructor(dataSource, documentService, documentTemplateService, employeeService, approvalStepSnapshotService, commentService) {
         this.dataSource = dataSource;
         this.documentService = documentService;
         this.documentTemplateService = documentTemplateService;
         this.employeeService = employeeService;
         this.approvalStepSnapshotService = approvalStepSnapshotService;
+        this.commentService = commentService;
         this.logger = new common_1.Logger(DocumentContext_1.name);
     }
     async createDocument(dto, queryRunner) {
@@ -119,6 +121,11 @@ let DocumentContext = DocumentContext_1 = class DocumentContext {
         const hasAnyProcessed = document_policy_validator_1.DocumentPolicyValidator.hasAnyApprovalProcessed(document.approvalSteps);
         document_policy_validator_1.DocumentPolicyValidator.validateCancelSubmitOrThrow(document.status, hasAnyProcessed);
         document.취소한다(dto.reason);
+        await this.commentService.createComment({
+            documentId: document.id,
+            authorId: dto.drafterId,
+            content: dto.reason,
+        }, queryRunner);
         const cancelledDocument = await this.documentService.save(document, { queryRunner });
         this.logger.log(`상신 취소 완료: ${dto.documentId}, 기안자: ${dto.drafterId}`);
         return cancelledDocument;
@@ -278,6 +285,7 @@ exports.DocumentContext = DocumentContext = DocumentContext_1 = __decorate([
         document_service_1.DomainDocumentService,
         document_template_service_1.DomainDocumentTemplateService,
         employee_service_1.DomainEmployeeService,
-        approval_step_snapshot_service_1.DomainApprovalStepSnapshotService])
+        approval_step_snapshot_service_1.DomainApprovalStepSnapshotService,
+        comment_service_1.DomainCommentService])
 ], DocumentContext);
 //# sourceMappingURL=document.context.js.map
