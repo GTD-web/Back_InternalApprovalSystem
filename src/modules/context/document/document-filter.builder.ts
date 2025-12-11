@@ -116,38 +116,50 @@ export class DocumentFilterBuilder {
      * 내가 결재라인에 있지만 현재 내 차례가 아닌 문서들
      * - 아직 내 차례가 아닌 것 (SCHEDULED): 내 앞에 PENDING 단계가 있음
      * - 이미 처리한 것 (COMPLETED): 내 단계가 APPROVED 상태
+     * - 상신취소된 문서 (CANCELLED): 결재라인에 있는 모든 결재자에게 표시
      * 합의(AGREEMENT)와 결재(APPROVAL)만 포함, 시행(IMPLEMENTATION)과 참조(REFERENCE)는 제외
      */
     private applyReceivedFilter(qb: SelectQueryBuilder<Document>, userId: string, receivedStepType?: string): void {
         const receivedStepTypes = [ApprovalStepType.APPROVAL];
 
         qb.andWhere('document.drafterId != :userId', { userId })
-            .andWhere('document.status = :pendingStatus', { pendingStatus: DocumentStatus.PENDING })
+            .andWhere('document.status IN (:...receivedStatuses)', {
+                receivedStatuses: [DocumentStatus.PENDING, DocumentStatus.CANCELLED],
+            })
             .andWhere(
                 `document.id IN (
                     SELECT DISTINCT d.id
                     FROM documents d
                     INNER JOIN approval_step_snapshots my_step ON d.id = my_step."documentId"
-                    WHERE d.status = :pendingStatus
-                    AND d."drafterId" != :userId
+                    WHERE d."drafterId" != :userId
                     AND my_step."approverId" = :userId
                     AND my_step."stepType" IN (:...receivedStepTypes)
                     AND (
-                        -- 아직 내 차례가 아닌 것 (앞에 PENDING 단계가 있음)
-                        EXISTS (
-                            SELECT 1
-                            FROM approval_step_snapshots prior_step
-                            WHERE prior_step."documentId" = my_step."documentId"
-                            AND prior_step."stepOrder" < my_step."stepOrder"
-                            AND prior_step.status = :pendingStepStatus
-                        )
+                        -- 상신취소된 문서는 결재라인에 있는 모든 결재자에게 표시
+                        d.status = :cancelledStatus
                         OR
-                        -- 내 차례가 지나간 것 (내 단계가 APPROVED)
-                        my_step.status = :approvedStepStatus
+                        (
+                            d.status = :pendingStatus
+                            AND (
+                                -- 아직 내 차례가 아닌 것 (앞에 PENDING 단계가 있음)
+                                EXISTS (
+                                    SELECT 1
+                                    FROM approval_step_snapshots prior_step
+                                    WHERE prior_step."documentId" = my_step."documentId"
+                                    AND prior_step."stepOrder" < my_step."stepOrder"
+                                    AND prior_step.status = :pendingStepStatus
+                                )
+                                OR
+                                -- 내 차례가 지나간 것 (내 단계가 APPROVED)
+                                my_step.status = :approvedStepStatus
+                            )
+                        )
                     )
                 )`,
                 {
                     receivedStepTypes,
+                    cancelledStatus: DocumentStatus.CANCELLED,
+                    pendingStatus: DocumentStatus.PENDING,
                     pendingStepStatus: ApprovalStatus.PENDING,
                     approvedStepStatus: ApprovalStatus.APPROVED,
                 },

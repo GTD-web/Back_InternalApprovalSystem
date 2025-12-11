@@ -220,7 +220,6 @@ let ApprovalProcessContext = ApprovalProcessContext_1 = class ApprovalProcessCon
         }
         const hasNextProcessed = document_policy_validator_1.DocumentPolicyValidator.hasNextStepProcessed(step.stepOrder, document.approvalSteps);
         document_policy_validator_1.DocumentPolicyValidator.validateCancelApprovalOrThrow(step.status, hasNextProcessed);
-        step.대기한다();
         if (dto.reason) {
             await this.commentService.createComment({
                 documentId: step.documentId,
@@ -228,12 +227,13 @@ let ApprovalProcessContext = ApprovalProcessContext_1 = class ApprovalProcessCon
                 content: dto.reason,
             }, queryRunner);
         }
-        await this.approvalStepSnapshotService.save(step, { queryRunner });
-        this.logger.log(`결재 취소 완료: ${dto.stepSnapshotId}, 결재자: ${dto.approverId}`);
+        document.취소한다(dto.reason);
+        await this.documentService.save(document, { queryRunner });
+        this.logger.log(`상신 취소 완료: ${document.id}, 결재자: ${dto.approverId}`);
         return {
             stepSnapshotId: step.id,
             documentId: document.id,
-            message: '결재가 취소되었습니다.',
+            message: '상신이 취소되었습니다.',
         };
     }
     async getMyPendingApprovals(userId, type, page = 1, limit = 20, queryRunner) {

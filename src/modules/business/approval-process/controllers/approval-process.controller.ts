@@ -143,23 +143,19 @@ export class ApprovalProcessController {
     @Post('cancel')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
-        summary: '결재취소 (결재자용)',
+        summary: '상신 취소 (결재자용)',
         description:
-            '결재자가 본인의 결재를 취소합니다.\n\n' +
+            '상신을 취소합니다.\n\n' +
             '**정책:**\n' +
-            '- 본인이 승인(APPROVED)한 결재 단계만 취소 가능\n' +
-            '- 다음 단계 수신자가 아직 어떤 처리도 하지 않은 상태에서만 가능\n' +
-            '- 취소 시 해당 결재 단계만 PENDING으로 되돌림 (문서 상태는 변경되지 않음)\n\n' +
+            '- 본인이 상신된 문서만 취소 가능\n' +
+            '- 취소 시 문서 상태를 CANCELLED로 변경\n\n' +
             '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 다음 결재자 대기 중일 때 본인 결재 취소\n' +
-            '- ❌ 실패: 다음 결재자가 이미 처리한 경우\n' +
-            '- ❌ 실패: 본인이 승인하지 않은 결재 단계 취소 시도\n' +
-            '- ❌ 실패: 다른 사람의 결재 단계 취소 시도',
+            '- ✅ 정상: 상신 취소',
     })
-    @ApiResponse({ status: 200, description: '결재 취소 성공' })
-    @ApiResponse({ status: 400, description: '잘못된 요청 (승인한 결재만 취소 가능, 다음 단계가 이미 처리됨)' })
+    @ApiResponse({ status: 200, description: '상신 취소 성공' })
+    @ApiResponse({ status: 400, description: '잘못된 요청 (상신된 문서만 취소 가능)' })
     @ApiResponse({ status: 403, description: '권한 없음 (본인의 결재 단계만 취소 가능)' })
-    @ApiResponse({ status: 404, description: '결재 단계를 찾을 수 없음' })
+    @ApiResponse({ status: 404, description: '문서를 찾을 수 없음' })
     async cancelApprovalStep(@User() user: Employee, @Body() dto: CancelApprovalStepDto) {
         return await this.approvalProcessService.cancelApprovalStep(dto, user.id);
     }
