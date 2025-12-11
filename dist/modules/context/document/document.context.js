@@ -57,6 +57,9 @@ let DocumentContext = DocumentContext_1 = class DocumentContext {
             where: { id: documentId },
             queryRunner,
         });
+        if (dto.metadata) {
+            document.메타데이터를설정한다(dto.metadata);
+        }
         const isTitleOrContentUpdated = dto.title !== undefined || dto.content !== undefined;
         let updatedMetadata = document.metadata;
         if (isTitleOrContentUpdated) {

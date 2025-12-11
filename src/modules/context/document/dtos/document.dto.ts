@@ -37,6 +37,7 @@ export class CreateDocumentDto {
 export class UpdateDocumentDto {
     title?: string;
     content?: string;
+    metadata?: Record<string, any>; // 추가 메타데이터 (금액, 날짜 등)
     comment?: string; // 문서 수정 코멘트
     status?: DocumentStatus; // 상태 업데이트용
     approvalSteps?: ApprovalStepSnapshotItemDto[]; // 결재단계 스냅샷 목록 (id가 있으면 수정, 없으면 생성)

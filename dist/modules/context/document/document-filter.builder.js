@@ -76,7 +76,7 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
         const receivedStepTypes = [approval_enum_1.ApprovalStepType.APPROVAL];
         qb.andWhere('document.drafterId != :userId', { userId })
             .andWhere('document.status IN (:...receivedStatuses)', {
-            receivedStatuses: [approval_enum_1.DocumentStatus.PENDING, approval_enum_1.DocumentStatus.CANCELLED],
+            receivedStatuses: [approval_enum_1.DocumentStatus.PENDING],
         })
             .andWhere(`document.id IN (
                     SELECT DISTINCT d.id
@@ -86,11 +86,7 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
                     AND my_step."approverId" = :userId
                     AND my_step."stepType" IN (:...receivedStepTypes)
                     AND (
-                        -- 상신취소된 문서는 결재라인에 있는 모든 결재자에게 표시
-                        d.status = :cancelledStatus
-                        OR
-                        (
-                            d.status = :pendingStatus
+                       d.status = :pendingStatus
                             AND (
                                 -- 아직 내 차례가 아닌 것 (앞에 PENDING 단계가 있음)
                                 EXISTS (
@@ -104,7 +100,6 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
                                 -- 내 차례가 지나간 것 (내 단계가 APPROVED)
                                 my_step.status = :approvedStepStatus
                             )
-                        )
                     )
                 )`, {
             receivedStepTypes,
@@ -217,7 +212,7 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
         });
     }
     applyImplementationFilter(qb, userId) {
-        qb.andWhere('document.drafterId != :userId', { userId }).andWhere(`document.id IN (
+        qb.andWhere(`document.id IN (
                 SELECT DISTINCT d.id
                 FROM documents d
                 INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"

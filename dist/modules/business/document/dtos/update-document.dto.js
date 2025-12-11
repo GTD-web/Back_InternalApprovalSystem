@@ -37,6 +37,15 @@ __decorate([
 ], UpdateDocumentDto.prototype, "content", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
+        description: '추가 메타데이터 (금액, 날짜 등)',
+        example: { amount: 100000, date: '2025-01-01' },
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], UpdateDocumentDto.prototype, "metadata", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
         description: '문서 수정 코멘트',
         example: '금액 수정',
     }),

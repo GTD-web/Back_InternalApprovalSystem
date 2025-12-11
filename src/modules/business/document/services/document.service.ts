@@ -98,6 +98,7 @@ export class DocumentService {
             title: dto.title,
             content: dto.content,
             comment: dto.comment,
+            metadata: dto.metadata,
             approvalSteps: dto.approvalSteps?.map((step) => ({
                 id: step.id,
                 stepOrder: step.stepOrder,
