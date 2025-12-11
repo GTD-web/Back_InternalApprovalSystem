@@ -151,7 +151,7 @@ export class ApprovalProcessService {
     }
 
     /**
-     * 결재취소 (결재자용)
+     * 상신 취소 (결재자용)
      * 정책: 본인이 승인한 상태이고, 다음 단계가 처리되지 않은 상태에서만 가능
      */
     async cancelApprovalStep(dto: CancelApprovalStepDto, approverId: string) {

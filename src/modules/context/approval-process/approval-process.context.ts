@@ -374,7 +374,7 @@ export class ApprovalProcessContext {
      * 5. 결재취소 (결재자용)
      *
      * 정책: 본인이 승인한 상태이고, 다음 단계가 처리되지 않은 상태에서만 가능
-     * 결과: 본인의 결재 단계를 PENDING으로 되돌림 (문서 상태는 변경하지 않음)
+     * 결과: 문서 상신을 취소함 (문서 상태를 CANCELLED로 변경)
      */
     async 결재를취소한다(dto: CancelApprovalStepDto, queryRunner?: QueryRunner): Promise<CancelApprovalStepResultDto> {
         this.logger.log(`결재 취소 시작: ${dto.stepSnapshotId}, 결재자: ${dto.approverId}`);
@@ -407,9 +407,6 @@ export class ApprovalProcessContext {
         const hasNextProcessed = DocumentPolicyValidator.hasNextStepProcessed(step.stepOrder, document.approvalSteps);
         DocumentPolicyValidator.validateCancelApprovalOrThrow(step.status, hasNextProcessed);
 
-        // 6) 본인의 승인 단계를 PENDING으로 되돌림 및 승인일자 초기화
-        step.대기한다();
-
         // 7) 취소 사유를 Comment 엔티티로 생성
         if (dto.reason) {
             await this.commentService.createComment(
@@ -421,14 +418,17 @@ export class ApprovalProcessContext {
                 queryRunner,
             );
         }
-        await this.approvalStepSnapshotService.save(step, { queryRunner });
 
-        this.logger.log(`결재 취소 완료: ${dto.stepSnapshotId}, 결재자: ${dto.approverId}`);
+        // 6) 문서 상신을 취소함
+        document.취소한다(dto.reason);
+        await this.documentService.save(document, { queryRunner });
+
+        this.logger.log(`상신 취소 완료: ${document.id}, 결재자: ${dto.approverId}`);
 
         return {
             stepSnapshotId: step.id,
             documentId: document.id,
-            message: '결재가 취소되었습니다.',
+            message: '상신이 취소되었습니다.',
         };
     }
 
