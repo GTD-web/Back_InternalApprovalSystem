@@ -124,7 +124,7 @@ export class DocumentFilterBuilder {
 
         qb.andWhere('document.drafterId != :userId', { userId })
             .andWhere('document.status IN (:...receivedStatuses)', {
-                receivedStatuses: [DocumentStatus.PENDING, DocumentStatus.CANCELLED],
+                receivedStatuses: [DocumentStatus.PENDING],
             })
             .andWhere(
                 `document.id IN (
@@ -135,11 +135,7 @@ export class DocumentFilterBuilder {
                     AND my_step."approverId" = :userId
                     AND my_step."stepType" IN (:...receivedStepTypes)
                     AND (
-                        -- 상신취소된 문서는 결재라인에 있는 모든 결재자에게 표시
-                        d.status = :cancelledStatus
-                        OR
-                        (
-                            d.status = :pendingStatus
+                       d.status = :pendingStatus
                             AND (
                                 -- 아직 내 차례가 아닌 것 (앞에 PENDING 단계가 있음)
                                 EXISTS (
@@ -153,7 +149,6 @@ export class DocumentFilterBuilder {
                                 -- 내 차례가 지나간 것 (내 단계가 APPROVED)
                                 my_step.status = :approvedStepStatus
                             )
-                        )
                     )
                 )`,
                 {
@@ -307,7 +302,7 @@ export class DocumentFilterBuilder {
      * - 내가 시행자로 있으면서 아직 시행하지 않은 것 (PENDING 상태)
      */
     private applyImplementationFilter(qb: SelectQueryBuilder<Document>, userId: string): void {
-        qb.andWhere('document.drafterId != :userId', { userId }).andWhere(
+        qb.andWhere(
             `document.id IN (
                 SELECT DISTINCT d.id
                 FROM documents d

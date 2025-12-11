@@ -6,6 +6,7 @@ import { Employee } from '../../domain/employee/employee.entity';
 import { Department } from '../../domain/department/department.entity';
 import { Position } from '../../domain/position/position.entity';
 import { AssigneeRule } from '../../../common/enums/approval.enum';
+import { EmployeeStatus } from '../../../common/enums/employee.enum';
 
 /**
  * 결재자 매핑 서비스
@@ -519,6 +520,9 @@ export class ApproverMappingService {
         departmentId: string,
     ): Promise<{ employee: Employee; position: Position | null; department: Department | null }[]> {
         const allEmployees = await this.employeeService.findAll({
+            where: {
+                status: EmployeeStatus.Active,
+            },
             relations: ['departmentPositions', 'departmentPositions.position', 'departmentPositions.department'],
         });
 

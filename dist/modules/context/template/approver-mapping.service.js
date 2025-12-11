@@ -16,6 +16,7 @@ const document_template_service_1 = require("../../domain/document-template/docu
 const employee_service_1 = require("../../domain/employee/employee.service");
 const department_service_1 = require("../../domain/department/department.service");
 const approval_enum_1 = require("../../../common/enums/approval.enum");
+const employee_enum_1 = require("../../../common/enums/employee.enum");
 let ApproverMappingService = ApproverMappingService_1 = class ApproverMappingService {
     constructor(documentTemplateService, employeeService, departmentService) {
         this.documentTemplateService = documentTemplateService;
@@ -364,6 +365,9 @@ let ApproverMappingService = ApproverMappingService_1 = class ApproverMappingSer
     }
     async findDepartmentEmployeesWithPosition(departmentId) {
         const allEmployees = await this.employeeService.findAll({
+            where: {
+                status: employee_enum_1.EmployeeStatus.Active,
+            },
             relations: ['departmentPositions', 'departmentPositions.position', 'departmentPositions.department'],
         });
         return allEmployees

@@ -96,6 +96,10 @@ export class DocumentContext {
             queryRunner,
         });
 
+        if (dto.metadata) {
+            document.메타데이터를설정한다(dto.metadata);
+        }
+
         // 2) 타이틀/컨텐츠가 수정된 경우 메타데이터에 수정 이력 추가
         const isTitleOrContentUpdated = dto.title !== undefined || dto.content !== undefined;
         let updatedMetadata = document.metadata;

@@ -2,6 +2,7 @@ import { UpdateApprovalStepSnapshotItemDto } from './update-approval-step-snapsh
 export declare class UpdateDocumentDto {
     title?: string;
     content?: string;
+    metadata?: Record<string, any>;
     comment?: string;
     approvalSteps?: UpdateApprovalStepSnapshotItemDto[];
 }
