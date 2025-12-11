@@ -135,7 +135,7 @@ export class DocumentFilterBuilder {
                     AND my_step."approverId" = :userId
                     AND my_step."stepType" IN (:...receivedStepTypes)
                     AND (
-                       d.status = :pendingStatus
+                        d.status = :pendingStatus
                             AND (
                                 -- 아직 내 차례가 아닌 것 (앞에 PENDING 단계가 있음)
                                 EXISTS (
@@ -148,7 +148,7 @@ export class DocumentFilterBuilder {
                                 OR
                                 -- 내 차례가 지나간 것 (내 단계가 APPROVED)
                                 my_step.status = :approvedStepStatus
-                            )
+                        )    
                     )
                 )`,
                 {
@@ -308,12 +308,13 @@ export class DocumentFilterBuilder {
                 FROM documents d
                 INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
                 WHERE d.status = :approvedStatus
-                AND d."drafterId" != :userId
+                
                 AND ass."approverId" = :userId
                 AND ass."stepType" = :implementationType
                 AND ass.status = :pendingStepStatus
             )`,
             {
+                userId,
                 approvedStatus: DocumentStatus.APPROVED,
                 implementationType: ApprovalStepType.IMPLEMENTATION,
                 pendingStepStatus: ApprovalStatus.PENDING,
