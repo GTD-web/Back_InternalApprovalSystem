@@ -63,10 +63,13 @@ let DomainDocumentService = class DomainDocumentService extends base_service_1.B
         }
         return await this.documentRepository.save(document, { queryRunner });
     }
-    async submitDocument(document, documentNumber, documentTemplateId, queryRunner) {
+    async submitDocument(document, documentNumber, metadata, documentTemplateId, queryRunner) {
         document.문서번호를설정한다(documentNumber);
         if (documentTemplateId) {
             document.문서템플릿을설정한다(documentTemplateId);
+        }
+        if (metadata) {
+            document.메타데이터를설정한다(metadata);
         }
         document.상신한다();
         return await this.documentRepository.save(document, { queryRunner });

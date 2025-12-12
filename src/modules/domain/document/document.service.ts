@@ -81,6 +81,7 @@ export class DomainDocumentService extends BaseService<Document> {
     async submitDocument(
         document: Document,
         documentNumber: string,
+        metadata?: Record<string, any>,
         documentTemplateId?: string,
         queryRunner?: QueryRunner,
     ): Promise<Document> {
@@ -90,6 +91,11 @@ export class DomainDocumentService extends BaseService<Document> {
         // 템플릿 ID 설정 (있는 경우)
         if (documentTemplateId) {
             document.문서템플릿을설정한다(documentTemplateId);
+        }
+
+        // 메타데이터 설정 (있는 경우)
+        if (metadata) {
+            document.메타데이터를설정한다(metadata);
         }
 
         // 상신 처리 (상태 변경 + submittedAt 설정)

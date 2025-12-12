@@ -104,7 +104,7 @@ let DocumentContext = DocumentContext_1 = class DocumentContext {
             });
         }
         const documentNumber = await this.generateDocumentNumber(documentTemplateId, queryRunner);
-        const submittedDocument = await this.documentService.submitDocument(document, documentNumber, documentTemplateId || undefined, queryRunner);
+        const submittedDocument = await this.documentService.submitDocument(document, documentNumber, dto.metadata, documentTemplateId || undefined, queryRunner);
         this.logger.log(`문서 기안 완료: ${dto.documentId}, 문서번호: ${documentNumber}`);
         return submittedDocument;
     }

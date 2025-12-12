@@ -196,6 +196,7 @@ export class DocumentContext {
         const submittedDocument = await this.documentService.submitDocument(
             document,
             documentNumber,
+            dto.metadata,
             documentTemplateId || undefined,
             queryRunner,
         );
