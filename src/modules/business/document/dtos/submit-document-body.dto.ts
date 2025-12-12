@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, IsArray, ValidateNested } from 'class-validator';
+import { IsOptional, IsUUID, IsArray, ValidateNested, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApprovalStepSnapshotItemDto } from './approval-step-snapshot.dto';
 
@@ -17,6 +17,14 @@ export class SubmitDocumentBodyDto {
     documentTemplateId?: string;
 
     @ApiPropertyOptional({
+        description: '추가 메타데이터 (금액, 날짜 등)',
+        example: { amount: 100000, date: '2025-01-01' },
+    })
+    @IsOptional()
+    @IsObject()
+    metadata?: Record<string, any>;
+
+    @ApiPropertyOptional({
         description: '결재단계 스냅샷 목록 (기안 시 결재선 설정, 없으면 기존 스냅샷 사용)',
         type: [ApprovalStepSnapshotItemDto],
     })
@@ -26,4 +34,3 @@ export class SubmitDocumentBodyDto {
     @Type(() => ApprovalStepSnapshotItemDto)
     approvalSteps?: ApprovalStepSnapshotItemDto[];
 }
-

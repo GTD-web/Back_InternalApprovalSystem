@@ -28,6 +28,7 @@ export declare class UpdateDocumentDto {
 export declare class SubmitDocumentDto {
     documentId: string;
     documentTemplateId?: string;
+    metadata?: Record<string, any>;
     approvalSteps?: ApprovalStepSnapshotItemDto[];
 }
 export declare class CancelSubmitDto {

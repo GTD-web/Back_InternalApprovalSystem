@@ -162,6 +162,7 @@ export class DocumentService {
         const contextDto = {
             documentId: dto.documentId,
             documentTemplateId: dto.documentTemplateId,
+            metadata: dto.metadata,
             approvalSteps: dto.approvalSteps?.map((step) => ({
                 stepOrder: step.stepOrder,
                 stepType: step.stepType,
@@ -215,6 +216,7 @@ export class DocumentService {
             const submitDto: SubmitDocumentDto = {
                 documentId: draftDocument.id,
                 documentTemplateId: dto.documentTemplateId,
+                metadata: dto.metadata,
                 approvalSteps: dto.approvalSteps,
             };
             return await this.documentContext.submitDocument(submitDto, queryRunner);

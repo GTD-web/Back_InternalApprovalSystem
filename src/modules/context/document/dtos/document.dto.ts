@@ -50,6 +50,7 @@ export class UpdateDocumentDto {
 export class SubmitDocumentDto {
     documentId: string; // 기안할 문서 ID (임시저장된 문서)
     documentTemplateId?: string; // 문서 템플릿 ID (기안 시점에 지정 가능)
+    metadata?: Record<string, any>; // 추가 메타데이터 (금액, 날짜 등)
     approvalSteps?: ApprovalStepSnapshotItemDto[]; // 결재단계 스냅샷 목록 (기안 시 결재선 설정)
 }
 

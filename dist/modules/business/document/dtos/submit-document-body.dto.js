@@ -28,6 +28,15 @@ __decorate([
 ], SubmitDocumentBodyDto.prototype, "documentTemplateId", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
+        description: '추가 메타데이터 (금액, 날짜 등)',
+        example: { amount: 100000, date: '2025-01-01' },
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], SubmitDocumentBodyDto.prototype, "metadata", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
         description: '결재단계 스냅샷 목록 (기안 시 결재선 설정, 없으면 기존 스냅샷 사용)',
         type: [approval_step_snapshot_dto_1.ApprovalStepSnapshotItemDto],
     }),

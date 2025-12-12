@@ -105,6 +105,7 @@ let DocumentService = DocumentService_1 = class DocumentService {
         const contextDto = {
             documentId: dto.documentId,
             documentTemplateId: dto.documentTemplateId,
+            metadata: dto.metadata,
             approvalSteps: dto.approvalSteps?.map((step) => ({
                 stepOrder: step.stepOrder,
                 stepType: step.stepType,
@@ -137,6 +138,7 @@ let DocumentService = DocumentService_1 = class DocumentService {
             const submitDto = {
                 documentId: draftDocument.id,
                 documentTemplateId: dto.documentTemplateId,
+                metadata: dto.metadata,
                 approvalSteps: dto.approvalSteps,
             };
             return await this.documentContext.submitDocument(submitDto, queryRunner);
