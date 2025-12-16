@@ -371,8 +371,8 @@ export class DocumentFilterBuilder {
         userId: string,
         referenceReadStatus?: string,
     ): void {
-        qb.andWhere('document.drafterId != :userId', { userId }).andWhere('document.status = :implementedStatus', {
-            implementedStatus: DocumentStatus.IMPLEMENTED,
+        qb.andWhere('document.drafterId != :userId', { userId }).andWhere('document.status IN (:...approvedStatuses)', {
+            approvedStatuses: [DocumentStatus.APPROVED, DocumentStatus.REJECTED, DocumentStatus.IMPLEMENTED],
         });
 
         // 기본 조건: 내가 참조자로 있는 문서
@@ -388,7 +388,7 @@ export class DocumentFilterBuilder {
                     WHERE ass."stepType" = :referenceType
                     AND ass."approverId" = :userId
                     AND ass."status" = :referenceStatus
-                    AND d.status = :implementedStatus
+                    AND d.status IN (:...approvedStatuses)
                 )`,
                 {
                     referenceType: ApprovalStepType.REFERENCE,
@@ -404,7 +404,7 @@ export class DocumentFilterBuilder {
                     INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
                     WHERE ass."stepType" = :referenceType
                     AND ass."approverId" = :userId
-                    AND d.status = :implementedStatus
+                    AND d.status IN (:...approvedStatuses)
                 )`,
                 {
                     referenceType: ApprovalStepType.REFERENCE,
