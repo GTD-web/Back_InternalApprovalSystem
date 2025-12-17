@@ -1,4 +1,4 @@
-import { DocumentTemplateStatus, ApprovalStepType, AssigneeRule } from '../../../../common/enums/approval.enum';
+import { DocumentTemplateStatus, ApprovalStepType } from '../../../../common/enums/approval.enum';
 import { DepartmentType } from '../../../../common/enums/department.enum';
 export declare class DepartmentDto {
     id: string;
@@ -22,18 +22,15 @@ export declare class MappedApproverDto {
     type: string;
 }
 export declare class ApprovalStepTemplateWithApproversDto {
-    id: string;
-    documentTemplateId: string;
     stepOrder: number;
     stepType: ApprovalStepType;
-    assigneeRule: AssigneeRule;
-    targetEmployeeId?: string;
-    targetDepartmentId?: string;
-    targetPositionId?: string;
-    mappedApprovers: MappedApproverDto[];
-    targetDepartment?: DepartmentDto;
-    createdAt: Date;
-    updatedAt: Date;
+    employeeId: string;
+    employeeNumber: string;
+    name: string;
+    positionId?: string;
+    positionTitle?: string;
+    departmentId?: string;
+    departmentName?: string;
 }
 export declare class CategoryResponseDto {
     id: string;
@@ -60,6 +57,12 @@ export declare class DrafterDto {
     department: DrafterDepartmentDto;
     position: PositionDto;
 }
+export declare class ApprovalStepTemplatesDto {
+    agreements: ApprovalStepTemplateWithApproversDto[];
+    approvals: ApprovalStepTemplateWithApproversDto[];
+    implementations: ApprovalStepTemplateWithApproversDto[];
+    references: ApprovalStepTemplateWithApproversDto[];
+}
 export declare class DocumentTemplateWithApproversResponseDto {
     id: string;
     name: string;
@@ -70,7 +73,7 @@ export declare class DocumentTemplateWithApproversResponseDto {
     categoryId?: string;
     category?: CategoryResponseDto;
     drafter: DrafterDto;
-    approvalStepTemplates: ApprovalStepTemplateWithApproversDto[];
+    approvalStepTemplates: ApprovalStepTemplatesDto;
     createdAt: Date;
     updatedAt: Date;
 }

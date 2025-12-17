@@ -1,5 +1,5 @@
 import { DocumentService } from '../services/document.service';
-import { CreateDocumentDto, UpdateDocumentDto, SubmitDocumentBodyDto, SubmitDocumentDirectDto, QueryMyAllDocumentsDto, CancelSubmitDto, CreateTestDocumentQueryDto } from '../dtos';
+import { CreateDocumentDto, UpdateDocumentDto, SubmitDocumentBodyDto, SubmitDocumentDirectDto, DocumentTemplateWithApproversResponseDto, QueryMyAllDocumentsDto, CancelSubmitDto, CreateTestDocumentQueryDto } from '../dtos';
 import { CreateCommentDto, UpdateCommentDto } from '../dtos/comment.dto';
 import { DocumentStatus } from '../../../../common/enums/approval.enum';
 import { Employee } from '../../../domain/employee/employee.entity';
@@ -126,36 +126,7 @@ export declare class DocumentController {
     submitDocument(documentId: string, dto: SubmitDocumentBodyDto): Promise<import("../../../domain").Document>;
     cancelSubmit(user: Employee, documentId: string, dto: CancelSubmitDto): Promise<import("../../../domain").Document>;
     submitDocumentDirect(user: Employee, dto: SubmitDocumentDirectDto): Promise<import("../../../domain").Document>;
-    getTemplateForNewDocument(templateId: string, user: Employee): Promise<{
-        drafter: {
-            id: string;
-            employeeNumber: string;
-            name: string;
-            email: string;
-            department: {
-                id: string;
-                departmentName: string;
-                departmentCode: string;
-            };
-            position: {
-                id: string;
-                positionTitle: string;
-                positionCode: string;
-                level: number;
-            };
-        };
-        approvalStepTemplates: any[];
-        id: string;
-        name: string;
-        code: string;
-        description?: string;
-        status: import("../../../../common/enums/approval.enum").DocumentTemplateStatus;
-        template: string;
-        categoryId?: string;
-        createdAt: Date;
-        updatedAt: Date;
-        category?: import("../../../domain").Category;
-    }>;
+    getTemplateForNewDocument(templateId: string, user: Employee): Promise<DocumentTemplateWithApproversResponseDto>;
     getDocumentStatistics(userId: string): Promise<{
         myDocuments: {
             draft: number;
@@ -175,6 +146,21 @@ export declare class DocumentController {
     updateComment(commentId: string, user: Employee, dto: UpdateCommentDto): Promise<import("../../../domain").Comment>;
     deleteComment(commentId: string, user: Employee): Promise<void>;
     getComment(commentId: string): Promise<import("../../../domain").Comment>;
+    deleteAllDocuments(): Promise<{
+        deletedApprovalStepSnapshots: number;
+        deletedComments: number;
+        deletedDocumentRevisions: number;
+        deletedDocuments: number;
+        deletedApprovalStepTemplates: number;
+        deletedDocumentTemplates: number;
+        deletedCategories: number;
+        createdCategories: number;
+        categories: {
+            name: string;
+            code: string;
+        }[];
+        message: string;
+    }>;
     createTestDocument(query: CreateTestDocumentQueryDto): Promise<{
         documentId: string;
         documentNumber: string;

@@ -5,8 +5,9 @@ import { DomainDepartmentService } from '../../domain/department/department.serv
 import { Employee } from '../../domain/employee/employee.entity';
 import { Department } from '../../domain/department/department.entity';
 import { Position } from '../../domain/position/position.entity';
-import { AssigneeRule } from '../../../common/enums/approval.enum';
+import { AssigneeRule, ApprovalStepType } from '../../../common/enums/approval.enum';
 import { EmployeeStatus } from '../../../common/enums/employee.enum';
+import { DocumentTemplateWithApproversResponseDto } from 'src/modules/business/document/dtos';
 
 /**
  * 결재자 매핑 서비스
@@ -31,7 +32,10 @@ export class ApproverMappingService {
      * @param templateId 문서 템플릿 ID
      * @param drafterId 기안자 ID (결재자 정보 맵핑을 위해 필요)
      */
-    async getDocumentTemplateWithMappedApprovers(templateId: string, drafterId: string) {
+    async getDocumentTemplateWithMappedApprovers(
+        templateId: string,
+        drafterId: string,
+    ): Promise<DocumentTemplateWithApproversResponseDto> {
         this.logger.debug(`문서 템플릿 상세 조회 (결재자 맵핑): ${templateId}, 기안자: ${drafterId}`);
 
         // 1. 문서 템플릿 조회
@@ -56,132 +60,153 @@ export class ApproverMappingService {
         const drafterDepartment = currentDepartmentPosition.department;
         const drafterPosition = currentDepartmentPosition.position;
 
-        // 4. 각 결재단계 템플릿에 대해 결재자 정보 맵핑
-        const mappedSteps = await Promise.all(
-            template.approvalStepTemplates.map(async (step) => {
-                const mappedStep: any = {
-                    ...step,
-                    mappedApprovers: [],
-                };
+        // 4. 각 결재단계 템플릿에 대해 결재자 정보 맵핑 (플랫한 구조로 변환)
+        type StepInfo = {
+            stepOrder: number;
+            stepType: ApprovalStepType;
+            employeeId: string;
+            employeeNumber: string;
+            name: string;
+            positionId?: string;
+            positionTitle?: string;
+            departmentId?: string;
+            departmentName?: string;
+        };
+        const flattenedSteps: StepInfo[] = [];
 
-                switch (step.assigneeRule) {
-                    case AssigneeRule.FIXED:
-                        // 고정 결재자: targetEmployeeId에 지정된 직원
-                        if (step.targetEmployeeId && step.targetEmployee) {
-                            const fixedEmployeeDeptPos = await this.getEmployeeDepartmentPosition(
-                                step.targetEmployee.id,
-                            );
-                            mappedStep.mappedApprovers = [
-                                {
-                                    employeeId: step.targetEmployee.id,
-                                    employeeNumber: step.targetEmployee.employeeNumber,
-                                    name: step.targetEmployee.name,
-                                    email: step.targetEmployee.email,
-                                    positionId: fixedEmployeeDeptPos.position?.id,
-                                    positionTitle: fixedEmployeeDeptPos.position?.positionTitle,
-                                    departmentId: fixedEmployeeDeptPos.department?.id,
-                                    departmentName: fixedEmployeeDeptPos.department?.departmentName,
-                                    type: 'FIXED',
-                                },
-                            ];
-                            delete mappedStep.targetEmployee;
-                        }
-                        break;
+        let stepOrderCounter = 0;
 
-                    case AssigneeRule.DRAFTER:
-                        // 기안자
-                        mappedStep.mappedApprovers = [
-                            {
-                                employeeId: drafter.id,
-                                employeeNumber: drafter.employeeNumber,
-                                name: drafter.name,
-                                email: drafter.email,
-                                positionId: drafterPosition.id,
-                                positionTitle: drafterPosition.positionTitle,
-                                departmentId: drafterDepartment.id,
-                                departmentName: drafterDepartment.departmentName,
-                                type: 'DRAFTER',
-                            },
-                        ];
-                        break;
+        // 동일 stepType + 동일 employeeId 중복 체크 함수
+        const isDuplicate = (stepType: ApprovalStepType, employeeId: string): boolean => {
+            return flattenedSteps.some((s) => s.stepType === stepType && s.employeeId === employeeId);
+        };
 
-                    case AssigneeRule.HIERARCHY_TO_SUPERIOR:
-                        // 기안자의 직속 상급자, 기안자까지 포함하는 부분은 일단 주석처리 2025-12-03 김규현
-                        const superiorResult = await this.findDirectSuperiorWithPosition(
-                            drafter,
-                            drafterDepartment,
-                            drafterPosition,
+        // 중복 체크 후 추가하는 헬퍼 함수
+        const addStepIfNotDuplicate = (stepInfo: Omit<StepInfo, 'stepOrder'>): void => {
+            if (!isDuplicate(stepInfo.stepType, stepInfo.employeeId)) {
+                flattenedSteps.push({
+                    stepOrder: stepOrderCounter++,
+                    ...stepInfo,
+                });
+            }
+        };
+
+        for (const step of template.approvalStepTemplates.sort((a, b) => a.stepOrder - b.stepOrder)) {
+            switch (step.assigneeRule) {
+                case AssigneeRule.FIXED:
+                    // 고정 결재자: targetEmployeeId에 지정된 직원
+                    if (step.targetEmployeeId && step.targetEmployee) {
+                        const fixedEmployeeDeptPos = await this.getEmployeeDepartmentPosition(step.targetEmployee.id);
+                        addStepIfNotDuplicate({
+                            stepType: step.stepType,
+                            employeeId: step.targetEmployee.id,
+                            employeeNumber: step.targetEmployee.employeeNumber,
+                            name: step.targetEmployee.name,
+                            positionId: fixedEmployeeDeptPos.position?.id,
+                            positionTitle: fixedEmployeeDeptPos.position?.positionTitle,
+                            departmentId: fixedEmployeeDeptPos.department?.id,
+                            departmentName: fixedEmployeeDeptPos.department?.departmentName,
+                        });
+                    }
+                    break;
+
+                case AssigneeRule.DRAFTER:
+                    // 기안자
+                    addStepIfNotDuplicate({
+                        stepType: step.stepType,
+                        employeeId: drafter.id,
+                        employeeNumber: drafter.employeeNumber,
+                        name: drafter.name,
+                        positionId: drafterPosition.id,
+                        positionTitle: drafterPosition.positionTitle,
+                        departmentId: drafterDepartment.id,
+                        departmentName: drafterDepartment.departmentName,
+                    });
+                    break;
+
+                case AssigneeRule.HIERARCHY_TO_SUPERIOR:
+                    // 기안자의 직속 상급자
+                    const superiorResult = await this.findDirectSuperiorWithPosition(
+                        drafter,
+                        drafterDepartment,
+                        drafterPosition,
+                    );
+                    if (superiorResult) {
+                        addStepIfNotDuplicate({
+                            stepType: step.stepType,
+                            employeeId: superiorResult.employee.id,
+                            employeeNumber: superiorResult.employee.employeeNumber,
+                            name: superiorResult.employee.name,
+                            positionId: superiorResult.position?.id,
+                            positionTitle: superiorResult.position?.positionTitle,
+                            departmentId: superiorResult.department?.id,
+                            departmentName: superiorResult.department?.departmentName,
+                        });
+                    }
+                    break;
+
+                case AssigneeRule.HIERARCHY_TO_POSITION:
+                    // 기안자부터 기안자 소속부서의 부서장과 최상위부서의 부서장까지
+                    const hierarchyApprovers = await this.findHierarchyApprovers(
+                        drafter,
+                        drafterDepartment,
+                        drafterPosition,
+                        step.targetPositionId,
+                    );
+                    for (const approver of hierarchyApprovers) {
+                        addStepIfNotDuplicate({
+                            stepType: step.stepType,
+                            employeeId: approver.employeeId,
+                            employeeNumber: approver.employeeNumber,
+                            name: approver.name,
+                            positionId: approver.positionId,
+                            positionTitle: approver.positionTitle,
+                            departmentId: approver.departmentId,
+                            departmentName: approver.departmentName,
+                        });
+                    }
+                    break;
+
+                case AssigneeRule.DEPARTMENT_REFERENCE:
+                    // 부서 전체 참조: targetDepartmentId에 지정된 부서의 모든 직원
+                    if (step.targetDepartmentId) {
+                        const departmentEmployeesWithPosition = await this.findDepartmentEmployeesWithPosition(
+                            step.targetDepartmentId,
                         );
-                        // mappedStep.mappedApprovers = [
-                        //     {
-                        //         employeeId: drafter.id,
-                        //         employeeNumber: drafter.employeeNumber,
-                        //         name: drafter.name,
-                        //         email: drafter.email,
-                        //         positionId: drafterPosition.id,
-                        //         positionTitle: drafterPosition.positionTitle,
-                        //         departmentId: drafterDepartment.id,
-                        //         departmentName: drafterDepartment.departmentName,
-                        //         type: 'DRAFTER',
-                        //     },
-                        // ];
-                        if (superiorResult) {
-                            mappedStep.mappedApprovers.push({
-                                employeeId: superiorResult.employee.id,
-                                employeeNumber: superiorResult.employee.employeeNumber,
-                                name: superiorResult.employee.name,
-                                email: superiorResult.employee.email,
-                                positionId: superiorResult.position?.id,
-                                positionTitle: superiorResult.position?.positionTitle,
-                                departmentId: superiorResult.department?.id,
-                                departmentName: superiorResult.department?.departmentName,
-                                type: 'SUPERIOR',
-                            });
-                        }
-                        break;
-
-                    case AssigneeRule.HIERARCHY_TO_POSITION:
-                        // 기안자부터 기안자 소속부서의 부서장과 최상위부서의 부서장까지
-                        const hierarchyApprovers = await this.findHierarchyApprovers(
-                            drafter,
-                            drafterDepartment,
-                            drafterPosition,
-                            step.targetPositionId,
-                        );
-                        mappedStep.mappedApprovers = hierarchyApprovers;
-                        delete mappedStep.targetPosition;
-                        break;
-
-                    case AssigneeRule.DEPARTMENT_REFERENCE:
-                        // 부서 전체 참조: targetDepartmentId에 지정된 부서의 모든 직원
-                        if (step.targetDepartmentId) {
-                            const departmentEmployeesWithPosition = await this.findDepartmentEmployeesWithPosition(
-                                step.targetDepartmentId,
-                            );
-                            mappedStep.mappedApprovers = departmentEmployeesWithPosition.map((emp) => ({
+                        for (const emp of departmentEmployeesWithPosition) {
+                            addStepIfNotDuplicate({
+                                stepType: step.stepType,
                                 employeeId: emp.employee.id,
                                 employeeNumber: emp.employee.employeeNumber,
                                 name: emp.employee.name,
-                                email: emp.employee.email,
                                 positionId: emp.position?.id,
                                 positionTitle: emp.position?.positionTitle,
                                 departmentId: emp.department?.id,
                                 departmentName: emp.department?.departmentName,
-                                type: 'DEPARTMENT_REFERENCE',
-                            }));
-                            mappedStep.targetDepartment = await this.departmentService.findOne({
-                                where: { id: step.targetDepartmentId },
                             });
                         }
-                        break;
-                }
+                    }
+                    break;
+            }
+        }
 
-                return mappedStep;
-            }),
-        );
+        // 5. stepType별로 분리
+        const agreements = flattenedSteps.filter((step) => step.stepType === ApprovalStepType.AGREEMENT);
+        const approvals = flattenedSteps.filter((step) => step.stepType === ApprovalStepType.APPROVAL);
+        const implementations = flattenedSteps.filter((step) => step.stepType === ApprovalStepType.IMPLEMENTATION);
+        const references = flattenedSteps.filter((step) => step.stepType === ApprovalStepType.REFERENCE);
 
         return {
-            ...template,
+            id: template.id,
+            name: template.name,
+            code: template.code,
+            description: template.description,
+            status: template.status,
+            template: template.template,
+            categoryId: template.categoryId,
+            category: template.category,
+            createdAt: template.createdAt,
+            updatedAt: template.updatedAt,
             drafter: {
                 id: drafter.id,
                 employeeNumber: drafter.employeeNumber,
@@ -199,7 +224,12 @@ export class ApproverMappingService {
                     level: drafterPosition.level,
                 },
             },
-            approvalStepTemplates: mappedSteps.sort((a, b) => a.stepOrder - b.stepOrder),
+            approvalStepTemplates: {
+                agreements,
+                approvals,
+                implementations,
+                references,
+            },
         };
     }
 

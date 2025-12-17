@@ -5,7 +5,6 @@ import { ApproverMappingService } from '../../../context/template/approver-mappi
 import { CreateTemplateDto } from '../dtos/create-template.dto';
 import { UpdateTemplateDto } from '../dtos/update-template.dto';
 import { CreateCategoryDto, UpdateCategoryDto } from '../dtos/category.dto';
-import { DocumentTemplateStatus } from '../../../../common/enums/approval.enum';
 export declare class TemplateService {
     private readonly dataSource;
     private readonly templateContext;
@@ -35,36 +34,7 @@ export declare class TemplateService {
         };
     }>;
     getTemplate(templateId: string): Promise<import("../../../domain").DocumentTemplate>;
-    getTemplateWithMappedApprovers(templateId: string, drafterId: string): Promise<{
-        drafter: {
-            id: string;
-            employeeNumber: string;
-            name: string;
-            email: string;
-            department: {
-                id: string;
-                departmentName: string;
-                departmentCode: string;
-            };
-            position: {
-                id: string;
-                positionTitle: string;
-                positionCode: string;
-                level: number;
-            };
-        };
-        approvalStepTemplates: any[];
-        id: string;
-        name: string;
-        code: string;
-        description?: string;
-        status: DocumentTemplateStatus;
-        template: string;
-        categoryId?: string;
-        createdAt: Date;
-        updatedAt: Date;
-        category?: import("../../../domain").Category;
-    }>;
+    getTemplateWithMappedApprovers(templateId: string, drafterId: string): Promise<import("../../document/dtos").DocumentTemplateWithApproversResponseDto>;
     createCategory(dto: CreateCategoryDto): Promise<import("../../../domain").Category>;
     updateCategory(categoryId: string, dto: UpdateCategoryDto): Promise<import("../../../domain").Category>;
     deleteCategory(categoryId: string): Promise<void>;

@@ -91,36 +91,7 @@ export declare class DocumentService {
     submitDocumentDirect(dto: SubmitDocumentDirectDto, drafterId: string): Promise<import("../../../domain").Document>;
     cancelSubmit(documentId: string, drafterId: string, reason: string): Promise<import("../../../domain").Document>;
     private sendSubmitNotification;
-    getTemplateForNewDocument(templateId: string, drafterId: string): Promise<{
-        drafter: {
-            id: string;
-            employeeNumber: string;
-            name: string;
-            email: string;
-            department: {
-                id: string;
-                departmentName: string;
-                departmentCode: string;
-            };
-            position: {
-                id: string;
-                positionTitle: string;
-                positionCode: string;
-                level: number;
-            };
-        };
-        approvalStepTemplates: any[];
-        id: string;
-        name: string;
-        code: string;
-        description?: string;
-        status: import("src/common/enums/approval.enum").DocumentTemplateStatus;
-        template: string;
-        categoryId?: string;
-        createdAt: Date;
-        updatedAt: Date;
-        category?: import("../../../domain").Category;
-    }>;
+    getTemplateForNewDocument(templateId: string, drafterId: string): Promise<import("../dtos").DocumentTemplateWithApproversResponseDto>;
     getDocumentStatistics(userId: string): Promise<{
         myDocuments: {
             draft: number;
@@ -229,6 +200,21 @@ export declare class DocumentService {
         title: string;
         status: DocumentStatus;
         approvalStepsCount: number;
+        message: string;
+    }>;
+    deleteAllDocuments(): Promise<{
+        deletedApprovalStepSnapshots: number;
+        deletedComments: number;
+        deletedDocumentRevisions: number;
+        deletedDocuments: number;
+        deletedApprovalStepTemplates: number;
+        deletedDocumentTemplates: number;
+        deletedCategories: number;
+        createdCategories: number;
+        categories: {
+            name: string;
+            code: string;
+        }[];
         message: string;
     }>;
 }

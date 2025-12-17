@@ -251,8 +251,8 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
         });
     }
     applyReceivedReferenceFilter(qb, userId, referenceReadStatus) {
-        qb.andWhere('document.drafterId != :userId', { userId }).andWhere('document.status = :implementedStatus', {
-            implementedStatus: approval_enum_1.DocumentStatus.IMPLEMENTED,
+        qb.andWhere('document.drafterId != :userId', { userId }).andWhere('document.status IN (:...approvedStatuses)', {
+            approvedStatuses: [approval_enum_1.DocumentStatus.APPROVED, approval_enum_1.DocumentStatus.REJECTED, approval_enum_1.DocumentStatus.IMPLEMENTED],
         });
         if (referenceReadStatus) {
             const statusCondition = referenceReadStatus === 'READ' ? approval_enum_1.ApprovalStatus.APPROVED : approval_enum_1.ApprovalStatus.PENDING;
@@ -263,7 +263,7 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
                     WHERE ass."stepType" = :referenceType
                     AND ass."approverId" = :userId
                     AND ass."status" = :referenceStatus
-                    AND d.status = :implementedStatus
+                    AND d.status IN (:...approvedStatuses)
                 )`, {
                 referenceType: approval_enum_1.ApprovalStepType.REFERENCE,
                 referenceStatus: statusCondition,
@@ -276,7 +276,7 @@ let DocumentFilterBuilder = class DocumentFilterBuilder {
                     INNER JOIN approval_step_snapshots ass ON d.id = ass."documentId"
                     WHERE ass."stepType" = :referenceType
                     AND ass."approverId" = :userId
-                    AND d.status = :implementedStatus
+                    AND d.status IN (:...approvedStatuses)
                 )`, {
                 referenceType: approval_enum_1.ApprovalStepType.REFERENCE,
             });

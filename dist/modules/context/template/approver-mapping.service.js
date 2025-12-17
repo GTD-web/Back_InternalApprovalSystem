@@ -40,91 +40,112 @@ let ApproverMappingService = ApproverMappingService_1 = class ApproverMappingSer
         }
         const drafterDepartment = currentDepartmentPosition.department;
         const drafterPosition = currentDepartmentPosition.position;
-        const mappedSteps = await Promise.all(template.approvalStepTemplates.map(async (step) => {
-            const mappedStep = {
-                ...step,
-                mappedApprovers: [],
-            };
+        const flattenedSteps = [];
+        let stepOrderCounter = 0;
+        const isDuplicate = (stepType, employeeId) => {
+            return flattenedSteps.some((s) => s.stepType === stepType && s.employeeId === employeeId);
+        };
+        const addStepIfNotDuplicate = (stepInfo) => {
+            if (!isDuplicate(stepInfo.stepType, stepInfo.employeeId)) {
+                flattenedSteps.push({
+                    stepOrder: stepOrderCounter++,
+                    ...stepInfo,
+                });
+            }
+        };
+        for (const step of template.approvalStepTemplates.sort((a, b) => a.stepOrder - b.stepOrder)) {
             switch (step.assigneeRule) {
                 case approval_enum_1.AssigneeRule.FIXED:
                     if (step.targetEmployeeId && step.targetEmployee) {
                         const fixedEmployeeDeptPos = await this.getEmployeeDepartmentPosition(step.targetEmployee.id);
-                        mappedStep.mappedApprovers = [
-                            {
-                                employeeId: step.targetEmployee.id,
-                                employeeNumber: step.targetEmployee.employeeNumber,
-                                name: step.targetEmployee.name,
-                                email: step.targetEmployee.email,
-                                positionId: fixedEmployeeDeptPos.position?.id,
-                                positionTitle: fixedEmployeeDeptPos.position?.positionTitle,
-                                departmentId: fixedEmployeeDeptPos.department?.id,
-                                departmentName: fixedEmployeeDeptPos.department?.departmentName,
-                                type: 'FIXED',
-                            },
-                        ];
-                        delete mappedStep.targetEmployee;
+                        addStepIfNotDuplicate({
+                            stepType: step.stepType,
+                            employeeId: step.targetEmployee.id,
+                            employeeNumber: step.targetEmployee.employeeNumber,
+                            name: step.targetEmployee.name,
+                            positionId: fixedEmployeeDeptPos.position?.id,
+                            positionTitle: fixedEmployeeDeptPos.position?.positionTitle,
+                            departmentId: fixedEmployeeDeptPos.department?.id,
+                            departmentName: fixedEmployeeDeptPos.department?.departmentName,
+                        });
                     }
                     break;
                 case approval_enum_1.AssigneeRule.DRAFTER:
-                    mappedStep.mappedApprovers = [
-                        {
-                            employeeId: drafter.id,
-                            employeeNumber: drafter.employeeNumber,
-                            name: drafter.name,
-                            email: drafter.email,
-                            positionId: drafterPosition.id,
-                            positionTitle: drafterPosition.positionTitle,
-                            departmentId: drafterDepartment.id,
-                            departmentName: drafterDepartment.departmentName,
-                            type: 'DRAFTER',
-                        },
-                    ];
+                    addStepIfNotDuplicate({
+                        stepType: step.stepType,
+                        employeeId: drafter.id,
+                        employeeNumber: drafter.employeeNumber,
+                        name: drafter.name,
+                        positionId: drafterPosition.id,
+                        positionTitle: drafterPosition.positionTitle,
+                        departmentId: drafterDepartment.id,
+                        departmentName: drafterDepartment.departmentName,
+                    });
                     break;
                 case approval_enum_1.AssigneeRule.HIERARCHY_TO_SUPERIOR:
                     const superiorResult = await this.findDirectSuperiorWithPosition(drafter, drafterDepartment, drafterPosition);
                     if (superiorResult) {
-                        mappedStep.mappedApprovers.push({
+                        addStepIfNotDuplicate({
+                            stepType: step.stepType,
                             employeeId: superiorResult.employee.id,
                             employeeNumber: superiorResult.employee.employeeNumber,
                             name: superiorResult.employee.name,
-                            email: superiorResult.employee.email,
                             positionId: superiorResult.position?.id,
                             positionTitle: superiorResult.position?.positionTitle,
                             departmentId: superiorResult.department?.id,
                             departmentName: superiorResult.department?.departmentName,
-                            type: 'SUPERIOR',
                         });
                     }
                     break;
                 case approval_enum_1.AssigneeRule.HIERARCHY_TO_POSITION:
                     const hierarchyApprovers = await this.findHierarchyApprovers(drafter, drafterDepartment, drafterPosition, step.targetPositionId);
-                    mappedStep.mappedApprovers = hierarchyApprovers;
-                    delete mappedStep.targetPosition;
+                    for (const approver of hierarchyApprovers) {
+                        addStepIfNotDuplicate({
+                            stepType: step.stepType,
+                            employeeId: approver.employeeId,
+                            employeeNumber: approver.employeeNumber,
+                            name: approver.name,
+                            positionId: approver.positionId,
+                            positionTitle: approver.positionTitle,
+                            departmentId: approver.departmentId,
+                            departmentName: approver.departmentName,
+                        });
+                    }
                     break;
                 case approval_enum_1.AssigneeRule.DEPARTMENT_REFERENCE:
                     if (step.targetDepartmentId) {
                         const departmentEmployeesWithPosition = await this.findDepartmentEmployeesWithPosition(step.targetDepartmentId);
-                        mappedStep.mappedApprovers = departmentEmployeesWithPosition.map((emp) => ({
-                            employeeId: emp.employee.id,
-                            employeeNumber: emp.employee.employeeNumber,
-                            name: emp.employee.name,
-                            email: emp.employee.email,
-                            positionId: emp.position?.id,
-                            positionTitle: emp.position?.positionTitle,
-                            departmentId: emp.department?.id,
-                            departmentName: emp.department?.departmentName,
-                            type: 'DEPARTMENT_REFERENCE',
-                        }));
-                        mappedStep.targetDepartment = await this.departmentService.findOne({
-                            where: { id: step.targetDepartmentId },
-                        });
+                        for (const emp of departmentEmployeesWithPosition) {
+                            addStepIfNotDuplicate({
+                                stepType: step.stepType,
+                                employeeId: emp.employee.id,
+                                employeeNumber: emp.employee.employeeNumber,
+                                name: emp.employee.name,
+                                positionId: emp.position?.id,
+                                positionTitle: emp.position?.positionTitle,
+                                departmentId: emp.department?.id,
+                                departmentName: emp.department?.departmentName,
+                            });
+                        }
                     }
                     break;
             }
-            return mappedStep;
-        }));
+        }
+        const agreements = flattenedSteps.filter((step) => step.stepType === approval_enum_1.ApprovalStepType.AGREEMENT);
+        const approvals = flattenedSteps.filter((step) => step.stepType === approval_enum_1.ApprovalStepType.APPROVAL);
+        const implementations = flattenedSteps.filter((step) => step.stepType === approval_enum_1.ApprovalStepType.IMPLEMENTATION);
+        const references = flattenedSteps.filter((step) => step.stepType === approval_enum_1.ApprovalStepType.REFERENCE);
         return {
-            ...template,
+            id: template.id,
+            name: template.name,
+            code: template.code,
+            description: template.description,
+            status: template.status,
+            template: template.template,
+            categoryId: template.categoryId,
+            category: template.category,
+            createdAt: template.createdAt,
+            updatedAt: template.updatedAt,
             drafter: {
                 id: drafter.id,
                 employeeNumber: drafter.employeeNumber,
@@ -142,7 +163,12 @@ let ApproverMappingService = ApproverMappingService_1 = class ApproverMappingSer
                     level: drafterPosition.level,
                 },
             },
-            approvalStepTemplates: mappedSteps.sort((a, b) => a.stepOrder - b.stepOrder),
+            approvalStepTemplates: {
+                agreements,
+                approvals,
+                implementations,
+                references,
+            },
         };
     }
     async findDirectSuperior(employee, department, position) {
