@@ -716,6 +716,68 @@ export class DocumentController {
 
     // ==================== 테스트 데이터 생성 API ====================
 
+    @Delete('test/all')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary: '🧪 전체 데이터 삭제 및 초기화 (개발용)',
+        description:
+            '⚠️ **주의: 모든 문서, 템플릿, 카테고리 데이터가 삭제됩니다!**\n\n' +
+            '개발/테스트 환경에서 데이터를 초기화할 때 사용합니다.\n\n' +
+            '**삭제되는 데이터:**\n' +
+            '- 모든 결재 단계 스냅샷 (approval_step_snapshots)\n' +
+            '- 모든 코멘트 (comments)\n' +
+            '- 모든 문서 리비전 (document_revisions)\n' +
+            '- 모든 문서 (documents)\n' +
+            '- 모든 결재 단계 템플릿 (approval_step_templates)\n' +
+            '- 모든 문서 템플릿 (document_templates)\n' +
+            '- 모든 카테고리 (categories)\n\n' +
+            '**생성되는 기본 카테고리:**\n' +
+            '- 기안문서 (DRAFT)\n' +
+            '- 지출결의서 (EXPENSE)\n' +
+            '- 신청서 (APPLICATION)\n' +
+            '- 보고서 (REPORT)\n' +
+            '- 공문 (OFFICIAL)\n' +
+            '- 인사문서 (HR)\n' +
+            '- 회계 (ACCOUNTING)\n\n' +
+            '**⚠️ 이 작업은 되돌릴 수 없습니다!**',
+    })
+    @ApiResponse({
+        status: 200,
+        description: '전체 데이터 삭제 및 초기화 성공',
+        schema: {
+            type: 'object',
+            properties: {
+                deletedApprovalStepSnapshots: { type: 'number', description: '삭제된 결재 단계 스냅샷 수' },
+                deletedComments: { type: 'number', description: '삭제된 코멘트 수' },
+                deletedDocumentRevisions: { type: 'number', description: '삭제된 문서 리비전 수' },
+                deletedDocuments: { type: 'number', description: '삭제된 문서 수' },
+                deletedApprovalStepTemplates: { type: 'number', description: '삭제된 결재 단계 템플릿 수' },
+                deletedDocumentTemplates: { type: 'number', description: '삭제된 문서 템플릿 수' },
+                deletedCategories: { type: 'number', description: '삭제된 카테고리 수' },
+                createdCategories: { type: 'number', description: '생성된 기본 카테고리 수' },
+                categories: {
+                    type: 'array',
+                    description: '생성된 카테고리 목록',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            name: { type: 'string', description: '카테고리 이름' },
+                            code: { type: 'string', description: '카테고리 코드' },
+                        },
+                    },
+                },
+                message: { type: 'string', description: '결과 메시지' },
+            },
+        },
+    })
+    @ApiResponse({
+        status: 401,
+        description: '인증 실패',
+    })
+    async deleteAllDocuments() {
+        return await this.documentService.deleteAllDocuments();
+    }
+
     @Get('test/create')
     @ApiOperation({
         summary: '🧪 테스트 문서 생성',

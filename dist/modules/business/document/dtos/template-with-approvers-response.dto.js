@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DocumentTemplateWithApproversResponseDto = exports.DrafterDto = exports.DrafterDepartmentDto = exports.PositionDto = exports.CategoryResponseDto = exports.ApprovalStepTemplateWithApproversDto = exports.MappedApproverDto = exports.DepartmentDto = void 0;
+exports.DocumentTemplateWithApproversResponseDto = exports.ApprovalStepTemplatesDto = exports.DrafterDto = exports.DrafterDepartmentDto = exports.PositionDto = exports.CategoryResponseDto = exports.ApprovalStepTemplateWithApproversDto = exports.MappedApproverDto = exports.DepartmentDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const approval_enum_1 = require("../../../../common/enums/approval.enum");
 const department_enum_1 = require("../../../../common/enums/department.enum");
@@ -144,20 +144,6 @@ class ApprovalStepTemplateWithApproversDto {
 exports.ApprovalStepTemplateWithApproversDto = ApprovalStepTemplateWithApproversDto;
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: '결재 단계 템플릿 ID',
-        example: 'uuid',
-    }),
-    __metadata("design:type", String)
-], ApprovalStepTemplateWithApproversDto.prototype, "id", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: '문서 템플릿 ID',
-        example: 'uuid',
-    }),
-    __metadata("design:type", String)
-], ApprovalStepTemplateWithApproversDto.prototype, "documentTemplateId", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
         description: '결재 단계 순서',
         example: 1,
     }),
@@ -173,61 +159,53 @@ __decorate([
 ], ApprovalStepTemplateWithApproversDto.prototype, "stepType", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: '할당 규칙',
-        enum: approval_enum_1.AssigneeRule,
-        example: approval_enum_1.AssigneeRule.FIXED,
-    }),
-    __metadata("design:type", String)
-], ApprovalStepTemplateWithApproversDto.prototype, "assigneeRule", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: '대상 직원 ID (FIXED 규칙인 경우)',
+        description: '결재자 ID',
         example: 'uuid',
     }),
     __metadata("design:type", String)
-], ApprovalStepTemplateWithApproversDto.prototype, "targetEmployeeId", void 0);
+], ApprovalStepTemplateWithApproversDto.prototype, "employeeId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '결재자 사번',
+        example: 'EMP001',
+    }),
+    __metadata("design:type", String)
+], ApprovalStepTemplateWithApproversDto.prototype, "employeeNumber", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '결재자 이름',
+        example: '홍길동',
+    }),
+    __metadata("design:type", String)
+], ApprovalStepTemplateWithApproversDto.prototype, "name", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
-        description: '대상 부서 ID (DEPARTMENT_HEAD 규칙인 경우)',
+        description: '직책 ID',
         example: 'uuid',
     }),
     __metadata("design:type", String)
-], ApprovalStepTemplateWithApproversDto.prototype, "targetDepartmentId", void 0);
+], ApprovalStepTemplateWithApproversDto.prototype, "positionId", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
-        description: '대상 직책 ID (HIERARCHY_TO_POSITION 규칙인 경우)',
+        description: '직책명',
+        example: '팀장',
+    }),
+    __metadata("design:type", String)
+], ApprovalStepTemplateWithApproversDto.prototype, "positionTitle", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '부서 ID',
         example: 'uuid',
     }),
     __metadata("design:type", String)
-], ApprovalStepTemplateWithApproversDto.prototype, "targetPositionId", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: '맵핑된 결재자 목록',
-        type: [MappedApproverDto],
-    }),
-    __metadata("design:type", Array)
-], ApprovalStepTemplateWithApproversDto.prototype, "mappedApprovers", void 0);
+], ApprovalStepTemplateWithApproversDto.prototype, "departmentId", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
-        description: '대상 부서 정보',
-        type: DepartmentDto,
+        description: '부서명',
+        example: '개발팀',
     }),
-    __metadata("design:type", DepartmentDto)
-], ApprovalStepTemplateWithApproversDto.prototype, "targetDepartment", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: '생성일',
-        example: '2025-11-11T00:00:00.000Z',
-    }),
-    __metadata("design:type", Date)
-], ApprovalStepTemplateWithApproversDto.prototype, "createdAt", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: '수정일',
-        example: '2025-11-11T00:00:00.000Z',
-    }),
-    __metadata("design:type", Date)
-], ApprovalStepTemplateWithApproversDto.prototype, "updatedAt", void 0);
+    __metadata("design:type", String)
+], ApprovalStepTemplateWithApproversDto.prototype, "departmentName", void 0);
 class CategoryResponseDto {
 }
 exports.CategoryResponseDto = CategoryResponseDto;
@@ -359,6 +337,37 @@ __decorate([
     }),
     __metadata("design:type", PositionDto)
 ], DrafterDto.prototype, "position", void 0);
+class ApprovalStepTemplatesDto {
+}
+exports.ApprovalStepTemplatesDto = ApprovalStepTemplatesDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '합의 단계 목록',
+        type: [ApprovalStepTemplateWithApproversDto],
+    }),
+    __metadata("design:type", Array)
+], ApprovalStepTemplatesDto.prototype, "agreements", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '결재 단계 목록',
+        type: [ApprovalStepTemplateWithApproversDto],
+    }),
+    __metadata("design:type", Array)
+], ApprovalStepTemplatesDto.prototype, "approvals", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '시행 단계 목록',
+        type: [ApprovalStepTemplateWithApproversDto],
+    }),
+    __metadata("design:type", Array)
+], ApprovalStepTemplatesDto.prototype, "implementations", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '참조 단계 목록',
+        type: [ApprovalStepTemplateWithApproversDto],
+    }),
+    __metadata("design:type", Array)
+], ApprovalStepTemplatesDto.prototype, "references", void 0);
 class DocumentTemplateWithApproversResponseDto {
 }
 exports.DocumentTemplateWithApproversResponseDto = DocumentTemplateWithApproversResponseDto;
@@ -428,10 +437,10 @@ __decorate([
 ], DocumentTemplateWithApproversResponseDto.prototype, "drafter", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: '결재 단계 템플릿 목록 (결재자 맵핑 포함)',
-        type: [ApprovalStepTemplateWithApproversDto],
+        description: '결재 단계 템플릿 (타입별 분류)',
+        type: ApprovalStepTemplatesDto,
     }),
-    __metadata("design:type", Array)
+    __metadata("design:type", ApprovalStepTemplatesDto)
 ], DocumentTemplateWithApproversResponseDto.prototype, "approvalStepTemplates", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({

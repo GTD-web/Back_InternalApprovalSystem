@@ -119,17 +119,17 @@ export class MappedApproverDto {
  * 결재단계 템플릿 (결재자 맵핑 포함) DTO
  */
 export class ApprovalStepTemplateWithApproversDto {
-    @ApiProperty({
-        description: '결재 단계 템플릿 ID',
-        example: 'uuid',
-    })
-    id: string;
+    // @ApiProperty({
+    //     description: '결재 단계 템플릿 ID',
+    //     example: 'uuid',
+    // })
+    // id: string;
 
-    @ApiProperty({
-        description: '문서 템플릿 ID',
-        example: 'uuid',
-    })
-    documentTemplateId: string;
+    // @ApiProperty({
+    //     description: '문서 템플릿 ID',
+    //     example: 'uuid',
+    // })
+    // documentTemplateId: string;
 
     @ApiProperty({
         description: '결재 단계 순서',
@@ -145,53 +145,95 @@ export class ApprovalStepTemplateWithApproversDto {
     stepType: ApprovalStepType;
 
     @ApiProperty({
-        description: '할당 규칙',
-        enum: AssigneeRule,
-        example: AssigneeRule.FIXED,
-    })
-    assigneeRule: AssigneeRule;
-
-    @ApiPropertyOptional({
-        description: '대상 직원 ID (FIXED 규칙인 경우)',
+        description: '결재자 ID',
         example: 'uuid',
     })
-    targetEmployeeId?: string;
+    employeeId: string;
+
+    @ApiProperty({
+        description: '결재자 사번',
+        example: 'EMP001',
+    })
+    employeeNumber: string;
+
+    @ApiProperty({
+        description: '결재자 이름',
+        example: '홍길동',
+    })
+    name: string;
 
     @ApiPropertyOptional({
-        description: '대상 부서 ID (DEPARTMENT_HEAD 규칙인 경우)',
+        description: '직책 ID',
         example: 'uuid',
     })
-    targetDepartmentId?: string;
+    positionId?: string;
 
     @ApiPropertyOptional({
-        description: '대상 직책 ID (HIERARCHY_TO_POSITION 규칙인 경우)',
+        description: '직책명',
+        example: '팀장',
+    })
+    positionTitle?: string;
+
+    @ApiPropertyOptional({
+        description: '부서 ID',
         example: 'uuid',
     })
-    targetPositionId?: string;
-
-    @ApiProperty({
-        description: '맵핑된 결재자 목록',
-        type: [MappedApproverDto],
-    })
-    mappedApprovers: MappedApproverDto[];
+    departmentId?: string;
 
     @ApiPropertyOptional({
-        description: '대상 부서 정보',
-        type: DepartmentDto,
+        description: '부서명',
+        example: '개발팀',
     })
-    targetDepartment?: DepartmentDto;
+    departmentName?: string;
 
-    @ApiProperty({
-        description: '생성일',
-        example: '2025-11-11T00:00:00.000Z',
-    })
-    createdAt: Date;
+    // @ApiProperty({
+    //     description: '할당 규칙',
+    //     enum: AssigneeRule,
+    //     example: AssigneeRule.FIXED,
+    // })
+    // assigneeRule: AssigneeRule;
 
-    @ApiProperty({
-        description: '수정일',
-        example: '2025-11-11T00:00:00.000Z',
-    })
-    updatedAt: Date;
+    // @ApiPropertyOptional({
+    //     description: '대상 직원 ID (FIXED 규칙인 경우)',
+    //     example: 'uuid',
+    // })
+    // targetEmployeeId?: string;
+
+    // @ApiPropertyOptional({
+    //     description: '대상 부서 ID (DEPARTMENT_HEAD 규칙인 경우)',
+    //     example: 'uuid',
+    // })
+    // targetDepartmentId?: string;
+
+    // @ApiPropertyOptional({
+    //     description: '대상 직책 ID (HIERARCHY_TO_POSITION 규칙인 경우)',
+    //     example: 'uuid',
+    // })
+    // targetPositionId?: string;
+
+    // @ApiProperty({
+    //     description: '맵핑된 결재자 목록',
+    //     type: [MappedApproverDto],
+    // })
+    // mappedApprovers: MappedApproverDto[];
+
+    // @ApiPropertyOptional({
+    //     description: '대상 부서 정보',
+    //     type: DepartmentDto,
+    // })
+    // targetDepartment?: DepartmentDto;
+
+    // @ApiProperty({
+    //     description: '생성일',
+    //     example: '2025-11-11T00:00:00.000Z',
+    // })
+    // createdAt: Date;
+
+    // @ApiProperty({
+    //     description: '수정일',
+    //     example: '2025-11-11T00:00:00.000Z',
+    // })
+    // updatedAt: Date;
 }
 
 /**
@@ -317,6 +359,35 @@ export class DrafterDto {
 }
 
 /**
+ * 결재 단계 템플릿 (타입별 분류) DTO
+ */
+export class ApprovalStepTemplatesDto {
+    @ApiProperty({
+        description: '합의 단계 목록',
+        type: [ApprovalStepTemplateWithApproversDto],
+    })
+    agreements: ApprovalStepTemplateWithApproversDto[];
+
+    @ApiProperty({
+        description: '결재 단계 목록',
+        type: [ApprovalStepTemplateWithApproversDto],
+    })
+    approvals: ApprovalStepTemplateWithApproversDto[];
+
+    @ApiProperty({
+        description: '시행 단계 목록',
+        type: [ApprovalStepTemplateWithApproversDto],
+    })
+    implementations: ApprovalStepTemplateWithApproversDto[];
+
+    @ApiProperty({
+        description: '참조 단계 목록',
+        type: [ApprovalStepTemplateWithApproversDto],
+    })
+    references: ApprovalStepTemplateWithApproversDto[];
+}
+
+/**
  * 문서 템플릿 (결재자 맵핑 포함) 응답 DTO
  */
 export class DocumentTemplateWithApproversResponseDto {
@@ -376,10 +447,10 @@ export class DocumentTemplateWithApproversResponseDto {
     drafter: DrafterDto;
 
     @ApiProperty({
-        description: '결재 단계 템플릿 목록 (결재자 맵핑 포함)',
-        type: [ApprovalStepTemplateWithApproversDto],
+        description: '결재 단계 템플릿 (타입별 분류)',
+        type: ApprovalStepTemplatesDto,
     })
-    approvalStepTemplates: ApprovalStepTemplateWithApproversDto[];
+    approvalStepTemplates: ApprovalStepTemplatesDto;
 
     @ApiProperty({
         description: '생성일',

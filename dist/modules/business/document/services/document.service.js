@@ -312,6 +312,58 @@ let DocumentService = DocumentService_1 = class DocumentService {
             };
         });
     }
+    async deleteAllDocuments() {
+        this.logger.warn('⚠️ 전체 데이터 삭제 시작');
+        return (0, transaction_util_1.withTransaction)(this.dataSource, async (queryRunner) => {
+            const approvalStepSnapshotsResult = await queryRunner.query('DELETE FROM approval_step_snapshots');
+            const deletedApprovalStepSnapshots = approvalStepSnapshotsResult[1] || 0;
+            this.logger.log(`결재 단계 스냅샷 삭제: ${deletedApprovalStepSnapshots}건`);
+            const commentsResult = await queryRunner.query('DELETE FROM comments');
+            const deletedComments = commentsResult[1] || 0;
+            this.logger.log(`코멘트 삭제: ${deletedComments}건`);
+            const documentRevisionsResult = await queryRunner.query('DELETE FROM document_revisions');
+            const deletedDocumentRevisions = documentRevisionsResult[1] || 0;
+            this.logger.log(`문서 리비전 삭제: ${deletedDocumentRevisions}건`);
+            const documentsResult = await queryRunner.query('DELETE FROM documents');
+            const deletedDocuments = documentsResult[1] || 0;
+            this.logger.log(`문서 삭제: ${deletedDocuments}건`);
+            const approvalStepTemplatesResult = await queryRunner.query('DELETE FROM approval_step_templates');
+            const deletedApprovalStepTemplates = approvalStepTemplatesResult[1] || 0;
+            this.logger.log(`결재 단계 템플릿 삭제: ${deletedApprovalStepTemplates}건`);
+            const documentTemplatesResult = await queryRunner.query('DELETE FROM document_templates');
+            const deletedDocumentTemplates = documentTemplatesResult[1] || 0;
+            this.logger.log(`문서 템플릿 삭제: ${deletedDocumentTemplates}건`);
+            const categoriesResult = await queryRunner.query('DELETE FROM categories');
+            const deletedCategories = categoriesResult[1] || 0;
+            this.logger.log(`카테고리 삭제: ${deletedCategories}건`);
+            const defaultCategories = [
+                { name: '기안문서', code: 'DRAFT', description: '일반 기안 문서', order: 1 },
+                { name: '지출결의서', code: 'EXPENSE', description: '지출 결의 관련 문서', order: 2 },
+                { name: '신청서', code: 'APPLICATION', description: '각종 신청 문서', order: 3 },
+                { name: '보고서', code: 'REPORT', description: '업무 보고 문서', order: 4 },
+                { name: '공문', code: 'OFFICIAL', description: '공식 문서', order: 5 },
+                { name: '인사문서', code: 'HR', description: '인사 관련 문서', order: 6 },
+                { name: '회계', code: 'ACCOUNTING', description: '회계 관련 문서', order: 7 },
+            ];
+            for (const category of defaultCategories) {
+                await queryRunner.manager.insert('categories', category);
+            }
+            this.logger.log(`기본 카테고리 생성: ${defaultCategories.length}건`);
+            this.logger.warn(`⚠️ 전체 데이터 삭제 및 초기화 완료: 문서 ${deletedDocuments}건 삭제, 카테고리 ${defaultCategories.length}건 생성`);
+            return {
+                deletedApprovalStepSnapshots,
+                deletedComments,
+                deletedDocumentRevisions,
+                deletedDocuments,
+                deletedApprovalStepTemplates,
+                deletedDocumentTemplates,
+                deletedCategories,
+                createdCategories: defaultCategories.length,
+                categories: defaultCategories.map((c) => ({ name: c.name, code: c.code })),
+                message: '전체 데이터가 삭제되고 기본 카테고리가 생성되었습니다.',
+            };
+        });
+    }
 };
 exports.DocumentService = DocumentService;
 exports.DocumentService = DocumentService = DocumentService_1 = __decorate([
