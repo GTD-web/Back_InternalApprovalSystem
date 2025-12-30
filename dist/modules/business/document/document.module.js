@@ -10,6 +10,7 @@ exports.DocumentBusinessModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const document_controller_1 = require("./controllers/document.controller");
+const document_public_controller_1 = require("./controllers/document-public.controller");
 const document_service_1 = require("./services/document.service");
 const document_module_1 = require("../../context/document/document.module");
 const template_module_1 = require("../../context/template/template.module");
@@ -46,7 +47,7 @@ exports.DocumentBusinessModule = DocumentBusinessModule = __decorate([
                 category_entity_1.Category,
             ]),
         ],
-        controllers: [document_controller_1.DocumentController],
+        controllers: [document_controller_1.DocumentController, document_public_controller_1.DocumentPublicController],
         providers: [document_service_1.DocumentService],
     })
 ], DocumentBusinessModule);
