@@ -1,0 +1,300 @@
+Project lias {
+  database_type: 'PostgreSQL'
+}
+
+Table departments {
+  id uuid [pk]
+  departmentName varchar [not null]
+  departmentCode varchar [unique, not null]
+  type department_type [not null, default: 'DEPARTMENT']
+  parentDepartmentId uuid
+  order int [not null, default: 0]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+
+  indexes {
+    (parentDepartmentId, order) [unique, name: 'UQ_departments_parent_order']
+    order [unique, name: 'UQ_departments_root_order']
+  }
+}
+
+Ref: departments.parentDepartmentId > departments.id
+
+Table positions {
+  id uuid [pk]
+  positionTitle varchar [not null]
+  positionCode varchar [unique, not null]
+  level int [not null]
+  hasManagementAuthority boolean [not null, default: false]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+}
+
+Table ranks {
+  id uuid [pk]
+  rankTitle varchar [not null]
+  rankCode varchar [unique, not null]
+  level int [not null]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+}
+
+Table employees {
+  id uuid [pk]
+  employeeNumber varchar [unique, not null]
+  name varchar [not null]
+  email varchar [unique]
+  password varchar
+  phoneNumber varchar
+  dateOfBirth date
+  gender gender_type
+  hireDate date [not null]
+  status employee_status [not null, default: 'Active']
+  currentRankId uuid
+  terminationDate date
+  terminationReason text
+  isInitialPasswordSet boolean [not null, default: false]
+  roles role_type[] [not null, default: `{USER}`]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+}
+
+Ref: employees.currentRankId > ranks.id
+
+Table employee_department_positions {
+  id uuid [pk]
+  employeeId uuid [not null]
+  departmentId uuid [not null]
+  positionId uuid [not null]
+  isManager boolean [not null, default: false]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+
+  indexes {
+    (employeeId, departmentId) [unique]
+    employeeId
+    departmentId
+    positionId
+  }
+}
+
+Ref: employee_department_positions.employeeId > employees.id
+Ref: employee_department_positions.departmentId > departments.id
+Ref: employee_department_positions.positionId > positions.id
+
+Table categories {
+  id uuid [pk]
+  name varchar [not null]
+  code varchar [unique, not null]
+  description text
+  order int [not null, default: 0]
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+
+  indexes {
+    code [unique]
+    order
+  }
+}
+
+Table document_templates {
+  id uuid [pk]
+  name varchar [not null]
+  code varchar [unique, not null]
+  description text
+  status document_template_status [not null, default: 'DRAFT']
+  template text [not null]
+  categoryId uuid
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+
+  indexes {
+    status
+    categoryId
+  }
+}
+
+Ref: document_templates.categoryId > categories.id
+
+Table approval_step_templates {
+  id uuid [pk]
+  documentTemplateId uuid [not null]
+  stepOrder int [not null]
+  stepType approval_step_type [not null]
+  assigneeRule assignee_rule [not null, default: 'FIXED']
+  targetEmployeeId uuid
+  targetDepartmentId uuid
+  targetPositionId uuid
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+
+  indexes {
+    (documentTemplateId, stepOrder)
+  }
+}
+
+Ref: approval_step_templates.documentTemplateId > document_templates.id [delete: cascade]
+Ref: approval_step_templates.targetEmployeeId > employees.id
+Ref: approval_step_templates.targetDepartmentId > departments.id
+Ref: approval_step_templates.targetPositionId > positions.id
+
+Table documents {
+  id uuid [pk]
+  documentNumber varchar(100) [unique]
+  title varchar(500) [not null]
+  content text [not null]
+  status document_status [not null, default: 'DRAFT']
+  comment text
+  metadata jsonb
+  drafterId uuid [not null]
+  documentTemplateId uuid
+  retentionPeriod varchar(50)
+  retentionPeriodUnit varchar(20)
+  retentionStartDate date
+  retentionEndDate date
+  submittedAt timestamp
+  cancelReason text
+  cancelledAt timestamp
+  approvedAt timestamp
+  rejectedAt timestamp
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+
+  indexes {
+    drafterId
+    status
+    documentNumber [unique]
+    createdAt
+  }
+}
+
+Ref: documents.drafterId > employees.id
+Ref: documents.documentTemplateId > document_templates.id
+
+Table approval_step_snapshots {
+  id uuid [pk]
+  documentId uuid [not null]
+  stepOrder int [not null]
+  stepType approval_step_type [not null]
+  approverId uuid [not null]
+  approverSnapshot jsonb
+  status approval_status [not null, default: 'PENDING']
+  comment text
+  approvedAt timestamp
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+
+  indexes {
+    (documentId, stepOrder)
+    approverId
+    status
+  }
+}
+
+Ref: approval_step_snapshots.documentId > documents.id [delete: cascade]
+Ref: approval_step_snapshots.approverId > employees.id
+
+Table comments {
+  id uuid [pk]
+  documentId uuid [not null]
+  authorId uuid [not null]
+  content text [not null]
+  parentCommentId uuid
+  createdAt timestamp [not null, default: `now()`]
+  updatedAt timestamp [not null, default: `now()`]
+  deletedAt timestamp
+
+  indexes {
+    documentId
+    authorId
+    parentCommentId
+    createdAt
+  }
+}
+
+Ref: comments.documentId > documents.id [delete: cascade]
+Ref: comments.authorId > employees.id
+Ref: comments.parentCommentId > comments.id [delete: cascade]
+
+Table document_revisions {
+  id uuid [pk]
+  documentId uuid [not null]
+  revisionNumber int [not null]
+  documentSnapshot jsonb [not null]
+  approvalStepsSnapshot jsonb
+  revisionComment text
+  revisedById uuid [not null]
+  createdAt timestamp [not null, default: `now()`]
+
+  indexes {
+    (documentId, revisionNumber)
+    (documentId, createdAt)
+    revisedById
+  }
+}
+
+Ref: document_revisions.documentId > documents.id [delete: cascade]
+Ref: document_revisions.revisedById > employees.id
+
+Enum department_type {
+  COMPANY
+  DIVISION
+  DEPARTMENT
+  TEAM
+}
+
+Enum gender_type {
+  MALE
+  FEMALE
+  OTHER
+}
+
+Enum employee_status {
+  Active
+  Inactive
+  OnLeave
+  Retired
+}
+
+Enum role_type {
+  ADMIN
+  USER
+  MANAGER
+}
+
+Enum document_template_status {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+Enum document_status {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  IMPLEMENTED
+}
+
+Enum approval_step_type {
+  AGREEMENT
+  APPROVAL
+  IMPLEMENTATION
+  REFERENCE
+}
+
+Enum approval_status {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+Enum assignee_rule {
+  FIXED
+  DRAFTER
+  HIERARCHY_TO_SUPERIOR
+  HIERARCHY_TO_POSITION
+  DEPARTMENT_REFERENCE
+}
