@@ -305,15 +305,15 @@ export class DocumentContext {
 
         // 해당 템플릿의 같은 연도 기안 문서 수 조회 (문서 번호가 있는 문서만)
         const yearStart = `${currentYear}-01-01`;
-        const yearEnd = `${currentYear}-12-31`;
+        const nextYearStart = `${parseInt(currentYear) + 1}-01-01`;
 
         const countResult = await queryRunner.query(
             `SELECT COUNT(*) as count FROM documents 
              WHERE "documentNumber" LIKE $1 
              AND "submittedAt" >= $2 
-             AND "submittedAt" <= $3
+             AND "submittedAt" < $3
              AND "documentNumber" IS NOT NULL`,
-            [`${templateCode}-${currentYear}-%`, yearStart, yearEnd],
+            [`${templateCode}-${currentYear}-%`, yearStart, nextYearStart],
         );
 
         const seq = parseInt(countResult[0]?.count || '0') + 1;
