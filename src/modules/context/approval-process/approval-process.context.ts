@@ -54,6 +54,8 @@ export class ApprovalProcessContext {
 
         const savedStep = await this.approvalStepSnapshotService.save(step, { queryRunner });
 
+        await this.checkAndUpdateDocumentStatus(savedStep.documentId, queryRunner);
+
         return savedStep;
     }
 

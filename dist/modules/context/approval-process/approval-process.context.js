@@ -35,6 +35,7 @@ let ApprovalProcessContext = ApprovalProcessContext_1 = class ApprovalProcessCon
         });
         step.승인한다();
         const savedStep = await this.approvalStepSnapshotService.save(step, { queryRunner });
+        await this.checkAndUpdateDocumentStatus(savedStep.documentId, queryRunner);
         return savedStep;
     }
     async completeAgreement(dto, queryRunner) {
