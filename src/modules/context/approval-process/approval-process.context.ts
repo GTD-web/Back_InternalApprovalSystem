@@ -41,6 +41,22 @@ export class ApprovalProcessContext {
         private readonly commentService: DomainCommentService,
     ) {}
 
+    async testApproveStep(stepSnapshotId: string, queryRunner?: QueryRunner) {
+        this.logger.log(`결재 승인 시작: ${stepSnapshotId}`);
+
+        // 1) Step 조회
+        const step = await this.approvalStepSnapshotService.findOneWithError({
+            where: { id: stepSnapshotId },
+        });
+
+        // 6) 협의 완료 처리 (도메인 서비스 사용)
+        step.승인한다(); // 협의도 APPROVED로 표시
+
+        const savedStep = await this.approvalStepSnapshotService.save(step, { queryRunner });
+
+        return savedStep;
+    }
+
     /**
      * 3. 협의 완료 처리
      * 정책: 결재진행중 상태의 문서에서만 협의 가능

@@ -28,6 +28,15 @@ let ApprovalProcessContext = ApprovalProcessContext_1 = class ApprovalProcessCon
         this.commentService = commentService;
         this.logger = new common_1.Logger(ApprovalProcessContext_1.name);
     }
+    async testApproveStep(stepSnapshotId, queryRunner) {
+        this.logger.log(`결재 승인 시작: ${stepSnapshotId}`);
+        const step = await this.approvalStepSnapshotService.findOneWithError({
+            where: { id: stepSnapshotId },
+        });
+        step.승인한다();
+        const savedStep = await this.approvalStepSnapshotService.save(step, { queryRunner });
+        return savedStep;
+    }
     async completeAgreement(dto, queryRunner) {
         this.logger.log(`협의 완료 시작: ${dto.stepSnapshotId}`);
         const step = await this.approvalStepSnapshotService.findOneWithError({

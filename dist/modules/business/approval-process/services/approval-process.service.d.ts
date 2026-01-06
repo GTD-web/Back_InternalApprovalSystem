@@ -3,7 +3,7 @@ import { ApprovalProcessContext } from '../../../context/approval-process/approv
 import { DocumentContext } from '../../../context/document/document.context';
 import { DocumentQueryService } from '../../../context/document/document-query.service';
 import { DocumentNotificationService } from '../../../context/notification/document-notification.service';
-import { ApproveStepDto, RejectStepDto, CompleteAgreementDto, CompleteImplementationDto, CancelApprovalStepDto } from '../dtos';
+import { ApproveStepDto, RejectStepDto, CompleteAgreementDto, CompleteImplementationDto, CancelApprovalStepDto, ProcessApprovalActionDto } from '../dtos';
 export declare class ApprovalProcessService {
     private readonly dataSource;
     private readonly approvalProcessContext;
@@ -61,6 +61,7 @@ export declare class ApprovalProcessService {
         };
     }>;
     getApprovalSteps(documentId: string): Promise<import("../../../domain").ApprovalStepSnapshot[]>;
+    processApprovalAction(dto: ProcessApprovalActionDto): Promise<import("../../../domain").ApprovalStepSnapshot>;
     private sendApproveNotification;
     private sendRejectNotification;
     private sendCompleteAgreementNotification;

@@ -107,6 +107,12 @@ let ApprovalProcessService = ApprovalProcessService_1 = class ApprovalProcessSer
         this.logger.debug(`문서 결재 단계 목록 조회: ${documentId}`);
         return await this.approvalProcessContext.getApprovalSteps(documentId);
     }
+    async processApprovalAction(dto) {
+        this.logger.log(`통합 결재 액션 처리 요청: ${dto.stepSnapshotId}`);
+        return await (0, transaction_util_1.withTransaction)(this.dataSource, async (queryRunner) => {
+            return await this.approvalProcessContext.testApproveStep(dto.stepSnapshotId, queryRunner);
+        });
+    }
     async sendApproveNotification(documentId, currentStepId, approverEmployeeNumber) {
         try {
             const document = await this.documentQueryService.getDocument(documentId);
