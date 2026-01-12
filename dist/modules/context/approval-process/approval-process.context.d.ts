@@ -12,6 +12,7 @@ export declare class ApprovalProcessContext {
     private readonly commentService;
     private readonly logger;
     constructor(dataSource: DataSource, approvalStepSnapshotService: DomainApprovalStepSnapshotService, documentService: DomainDocumentService, commentService: DomainCommentService);
+    testApproveStep(stepSnapshotId: string, queryRunner?: QueryRunner): Promise<ApprovalStepSnapshot>;
     completeAgreement(dto: CompleteAgreementDto, queryRunner?: QueryRunner): Promise<ApprovalStepSnapshot>;
     markReferenceRead(dto: {
         stepSnapshotId: string;

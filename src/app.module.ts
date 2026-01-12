@@ -83,7 +83,7 @@ import { NotificationContextModule } from './modules/context/notification';
         // ApprovalProcessBusinessModule,
         // TestDataBusinessModule,
     ],
-    controllers: [],
+    controllers: [AppController],
     providers: [],
 })
 export class AppModule {}

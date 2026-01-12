@@ -45,6 +45,9 @@ let ApprovalProcessController = class ApprovalProcessController {
     async getApprovalSteps(documentId) {
         return await this.approvalProcessService.getApprovalSteps(documentId);
     }
+    async processApprovalAction(dto) {
+        return await this.approvalProcessService.processApprovalAction(dto);
+    }
 };
 exports.ApprovalProcessController = ApprovalProcessController;
 __decorate([
@@ -195,6 +198,37 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], ApprovalProcessController.prototype, "getApprovalSteps", null);
+__decorate([
+    (0, common_1.Post)('process-action'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({
+        summary: '통합 결재 액션 처리 (테스트용)',
+        description: '승인, 반려, 협의 완료, 시행 완료, 참조 열람, 취소를 하나의 API로 처리합니다. type 값에 따라 적절한 액션이 수행됩니다.\n\n' +
+            '**지원 액션 타입:**\n' +
+            '- approve: 결재 승인\n' +
+            '- reject: 결재 반려\n' +
+            '- complete-agreement: 협의 완료\n' +
+            '- complete-implementation: 시행 완료\n' +
+            '- mark-reference-read: 참조 열람 확인\n' +
+            '- cancel: 결재 취소\n\n' +
+            '**테스트 시나리오:**\n' +
+            '- ✅ 정상: 승인 액션 처리\n' +
+            '- ✅ 정상: 반려 액션 처리\n' +
+            '- ✅ 정상: 참조 열람 액션 처리\n' +
+            '- ✅ 정상: 취소 액션 처리\n' +
+            '- ❌ 실패: 잘못된 액션 타입\n' +
+            '- ❌ 실패: 필수 필드 누락 (stepSnapshotId for approve)\n' +
+            '- ❌ 실패: 필수 필드 누락 (comment for reject)',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '액션 처리 성공', type: dtos_1.ApprovalActionResponseDto }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '잘못된 요청 (필수 필드 누락, 잘못된 타입 등)' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: '권한 없음' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '결재 단계 또는 문서를 찾을 수 없음' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [dtos_1.ProcessApprovalActionDto]),
+    __metadata("design:returntype", Promise)
+], ApprovalProcessController.prototype, "processApprovalAction", null);
 exports.ApprovalProcessController = ApprovalProcessController = __decorate([
     (0, swagger_1.ApiTags)('결재 프로세스'),
     (0, swagger_1.ApiBearerAuth)(),

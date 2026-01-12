@@ -1,5 +1,5 @@
 import { ApprovalProcessService } from '../services/approval-process.service';
-import { ApproveStepDto, RejectStepDto, CompleteAgreementDto, CompleteImplementationDto, CancelApprovalStepDto, MarkReferenceReadDto } from '../dtos';
+import { ApproveStepDto, RejectStepDto, CompleteAgreementDto, CompleteImplementationDto, CancelApprovalStepDto, MarkReferenceReadDto, ProcessApprovalActionDto } from '../dtos';
 import { Employee } from '../../../domain/employee/employee.entity';
 export declare class ApprovalProcessController {
     private readonly approvalProcessService;
@@ -11,4 +11,5 @@ export declare class ApprovalProcessController {
     rejectStep(user: Employee, dto: RejectStepDto): Promise<import("../../../domain").ApprovalStepSnapshot>;
     cancelApprovalStep(user: Employee, dto: CancelApprovalStepDto): Promise<import("../../../context/approval-process/dtos/approval-action.dto").CancelApprovalStepResultDto>;
     getApprovalSteps(documentId: string): Promise<import("../../../domain").ApprovalStepSnapshot[]>;
+    processApprovalAction(dto: ProcessApprovalActionDto): Promise<import("../../../domain").ApprovalStepSnapshot>;
 }

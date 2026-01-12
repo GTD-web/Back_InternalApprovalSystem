@@ -207,96 +207,16 @@ export class ApprovalProcessService {
     }
 
     /**
+     * TEST 용 함수
      * 통합 결재 액션 처리
      * 승인, 반려, 협의 완료, 시행 완료, 취소를 하나의 API로 처리합니다.
      */
-    // async processApprovalAction(dto: ProcessApprovalActionDto, approverId: string) {
-    //     this.logger.log(`통합 결재 액션 처리 요청: ${dto.type}`);
-
-    //     switch (dto.type) {
-    //         case ApprovalActionType.APPROVE:
-    //             if (!dto.stepSnapshotId) {
-    //                 throw new BadRequestException('stepSnapshotId는 필수입니다.');
-    //             }
-    //             return await this.approveStep(
-    //                 {
-    //                     stepSnapshotId: dto.stepSnapshotId,
-    //                     comment: dto.comment,
-    //                 },
-    //                 approverId,
-    //             );
-
-    //         case ApprovalActionType.REJECT:
-    //             if (!dto.stepSnapshotId) {
-    //                 throw new BadRequestException('stepSnapshotId는 필수입니다.');
-    //             }
-    //             if (!dto.comment) {
-    //                 throw new BadRequestException('반려 시 사유(comment)는 필수입니다.');
-    //             }
-    //             return await this.rejectStep(
-    //                 {
-    //                     stepSnapshotId: dto.stepSnapshotId,
-    //                     comment: dto.comment,
-    //                 },
-    //                 approverId,
-    //             );
-
-    //         case ApprovalActionType.COMPLETE_AGREEMENT:
-    //             if (!dto.stepSnapshotId) {
-    //                 throw new BadRequestException('stepSnapshotId는 필수입니다.');
-    //             }
-    //             return await this.completeAgreement(
-    //                 {
-    //                     stepSnapshotId: dto.stepSnapshotId,
-    //                     comment: dto.comment,
-    //                 },
-    //                 approverId,
-    //             );
-
-    //         case ApprovalActionType.COMPLETE_IMPLEMENTATION:
-    //             if (!dto.stepSnapshotId) {
-    //                 throw new BadRequestException('stepSnapshotId는 필수입니다.');
-    //             }
-    //             return await this.completeImplementation(
-    //                 {
-    //                     stepSnapshotId: dto.stepSnapshotId,
-    //                     comment: dto.comment,
-    //                     resultData: dto.resultData,
-    //                 },
-    //                 approverId,
-    //             );
-
-    //         case ApprovalActionType.MARK_REFERENCE_READ:
-    //             if (!dto.stepSnapshotId) {
-    //                 throw new BadRequestException('stepSnapshotId는 필수입니다.');
-    //             }
-    //             return await this.markReferenceRead(
-    //                 {
-    //                     stepSnapshotId: dto.stepSnapshotId,
-    //                     comment: dto.comment,
-    //                 },
-    //                 approverId,
-    //             );
-
-    //         case ApprovalActionType.CANCEL:
-    //             if (!dto.documentId) {
-    //                 throw new BadRequestException('documentId는 필수입니다.');
-    //             }
-    //             if (!dto.reason) {
-    //                 throw new BadRequestException('취소 사유(reason)는 필수입니다.');
-    //             }
-    //             return await this.cancelApproval(
-    //                 {
-    //                     documentId: dto.documentId,
-    //                     reason: dto.reason,
-    //                 },
-    //                 approverId,
-    //             );
-
-    //         default:
-    //             throw new BadRequestException(`지원하지 않는 액션 타입입니다: ${dto.type}`);
-    //     }
-    // }
+    async processApprovalAction(dto: ProcessApprovalActionDto) {
+        this.logger.log(`통합 결재 액션 처리 요청: ${dto.stepSnapshotId}`);
+        return await withTransaction(this.dataSource, async (queryRunner) => {
+            return await this.approvalProcessContext.testApproveStep(dto.stepSnapshotId, queryRunner);
+        });
+    }
 
     /**
      * ============================================

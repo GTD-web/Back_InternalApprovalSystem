@@ -7,10 +7,5 @@ export declare enum ApprovalActionType {
     CANCEL = "cancel"
 }
 export declare class ProcessApprovalActionDto {
-    type: ApprovalActionType;
     stepSnapshotId?: string;
-    documentId?: string;
-    comment?: string;
-    reason?: string;
-    resultData?: Record<string, any>;
 }

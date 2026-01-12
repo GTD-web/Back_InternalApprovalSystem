@@ -25,15 +25,6 @@ class ProcessApprovalActionDto {
 }
 exports.ProcessApprovalActionDto = ProcessApprovalActionDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({
-        description: '액션 타입',
-        enum: ApprovalActionType,
-        example: ApprovalActionType.APPROVE,
-    }),
-    (0, class_validator_1.IsEnum)(ApprovalActionType),
-    __metadata("design:type", String)
-], ProcessApprovalActionDto.prototype, "type", void 0);
-__decorate([
     (0, swagger_1.ApiPropertyOptional)({
         description: '결재 단계 스냅샷 ID (approve, reject, complete-agreement, complete-implementation, mark-reference-read 타입에서 필수)',
         example: 'uuid',
@@ -42,40 +33,4 @@ __decorate([
     (0, class_validator_1.IsUUID)(),
     __metadata("design:type", String)
 ], ProcessApprovalActionDto.prototype, "stepSnapshotId", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: '문서 ID (cancel 타입에서 필수)',
-        example: 'uuid',
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsUUID)(),
-    __metadata("design:type", String)
-], ProcessApprovalActionDto.prototype, "documentId", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: '의견 또는 사유 (reject 타입에서는 필수)',
-        example: '승인합니다.',
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], ProcessApprovalActionDto.prototype, "comment", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: '취소 사유 (cancel 타입에서 필수)',
-        example: '내용 수정이 필요하여 취소합니다.',
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], ProcessApprovalActionDto.prototype, "reason", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: '시행 결과 데이터 (complete-implementation 타입에서만 사용)',
-        example: { result: '완료', amount: 100000 },
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsObject)(),
-    __metadata("design:type", Object)
-], ProcessApprovalActionDto.prototype, "resultData", void 0);
 //# sourceMappingURL=process-approval-action.dto.js.map
