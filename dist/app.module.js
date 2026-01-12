@@ -12,6 +12,7 @@ const core_1 = require("@nestjs/core");
 const typeorm_1 = require("@nestjs/typeorm");
 const config_1 = require("@nestjs/config");
 const typeorm_config_1 = require("./configs/typeorm.config");
+const app_controller_1 = require("./app.controller");
 const env_config_1 = require("./configs/env.config");
 const auth_module_1 = require("./common/auth/auth.module");
 const domain_module_1 = require("./modules/domain/domain.module");
@@ -49,7 +50,7 @@ exports.AppModule = AppModule = __decorate([
             document_module_1.DocumentBusinessModule,
             approval_process_module_1.ApprovalProcessBusinessModule,
         ],
-        controllers: [],
+        controllers: [app_controller_1.AppController],
         providers: [],
     })
 ], AppModule);
