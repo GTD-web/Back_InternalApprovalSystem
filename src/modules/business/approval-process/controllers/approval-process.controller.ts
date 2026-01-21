@@ -124,7 +124,7 @@ export class ApprovalProcessController {
     @ApiOperation({
         summary: '결재 반려, 합의 반려',
         description:
-            '결재 단계를 반려합니다. 반려 사유는 필수입니다.\n\n' +
+            '결재, 합의 단계를 반려합니다. 반려 사유는 필수입니다.\n\n' +
             '**테스트 시나리오:**\n' +
             '- ✅ 정상: 결재 반려 (사유 포함)\n' +
             '- ❌ 실패: 반려 사유 누락',
