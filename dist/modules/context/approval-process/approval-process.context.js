@@ -192,9 +192,6 @@ let ApprovalProcessContext = ApprovalProcessContext_1 = class ApprovalProcessCon
         if (!dto.comment || dto.comment.trim().length === 0) {
             throw new common_1.BadRequestException('반려 사유를 입력해야 합니다.');
         }
-        if (step.stepType !== approval_enum_1.ApprovalStepType.APPROVAL) {
-            throw new common_1.BadRequestException('결재 단계만 반려할 수 있습니다.');
-        }
         step.반려한다();
         const rejectedStep = await this.approvalStepSnapshotService.save(step, {
             queryRunner,

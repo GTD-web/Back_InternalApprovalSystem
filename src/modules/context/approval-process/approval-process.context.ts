@@ -355,12 +355,7 @@ export class ApprovalProcessContext {
             throw new BadRequestException('반려 사유를 입력해야 합니다.');
         }
 
-        // 6) 결재 단계가 APPROVAL인지 확인
-        if (step.stepType !== ApprovalStepType.APPROVAL) {
-            throw new BadRequestException('결재 단계만 반려할 수 있습니다.');
-        }
-
-        // 7) 반려 처리 (도메인 서비스 사용)
+        // 6) 반려 처리 (도메인 서비스 사용)
         step.반려한다();
 
         const rejectedStep = await this.approvalStepSnapshotService.save(step, {

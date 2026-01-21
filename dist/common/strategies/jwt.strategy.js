@@ -26,6 +26,7 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
     }
     async validate(payload) {
         const employee = await this.employeeService.findOne({ where: { employeeNumber: payload.employeeNumber } });
+        console.log(employee);
         if (!employee || employee.employeeNumber !== payload.employeeNumber) {
             throw new common_1.UnauthorizedException();
         }
