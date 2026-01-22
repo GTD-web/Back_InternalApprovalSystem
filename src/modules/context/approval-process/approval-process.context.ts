@@ -62,13 +62,18 @@ export class ApprovalProcessContext {
     /**
      * 3. 협의 완료 처리
      * 정책: 결재진행중 상태의 문서에서만 협의 가능
+     * 협의는 순서에 상관없이 처리 가능하므로 문서 ID로 조회
      */
     async completeAgreement(dto: CompleteAgreementDto, queryRunner?: QueryRunner) {
-        this.logger.log(`협의 완료 시작: ${dto.stepSnapshotId}`);
+        this.logger.log(`협의 완료 시작: documentId=${dto.documentId}, 협의자=${dto.agreerId}`);
 
-        // 1) Step 조회
+        // 1) 해당 문서의 협의 단계 조회 (협의자는 순서에 상관없이 처리 가능)
         const step = await this.approvalStepSnapshotService.findOne({
-            where: { id: dto.stepSnapshotId, approverId: dto.agreerId },
+            where: {
+                documentId: dto.documentId,
+                approverId: dto.agreerId,
+                stepType: ApprovalStepType.AGREEMENT,
+            },
             relations: ['approver', 'document'],
             queryRunner,
         });
@@ -84,10 +89,6 @@ export class ApprovalProcessContext {
             ReceiverAction.APPROVE,
         );
 
-        // 4) 단계 타입 확인
-        if (step.stepType !== ApprovalStepType.AGREEMENT) {
-            throw new BadRequestException('협의 단계만 처리할 수 있습니다.');
-        }
 
         // 5) 상태 확인
         if (step.status !== ApprovalStatus.PENDING) {
@@ -114,7 +115,7 @@ export class ApprovalProcessContext {
             );
         }
 
-        this.logger.log(`협의 완료: ${dto.stepSnapshotId}`);
+        this.logger.log(`협의 완료: documentId=${dto.documentId}, stepId=${completedStep.id}`);
         return completedStep;
     }
 

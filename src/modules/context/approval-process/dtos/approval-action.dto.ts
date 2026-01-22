@@ -31,7 +31,7 @@ export class RejectStepDto {
  * 협의 완료 DTO
  */
 export class CompleteAgreementDto {
-    stepSnapshotId: string;
+    documentId: string;
     agreerId: string;
     comment?: string;
 }

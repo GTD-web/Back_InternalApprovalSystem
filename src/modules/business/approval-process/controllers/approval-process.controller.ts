@@ -35,12 +35,15 @@ export class ApprovalProcessController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: '협의 완료',
-        description: '협의 단계를 완료 처리합니다.\n\n' + '**테스트 시나리오:**\n' + '- ✅ 정상: 협의 완료',
+        description:
+            '협의 단계를 완료 처리합니다. 협의는 순서에 상관없이 처리 가능하므로 문서 ID를 기준으로 조회합니다.\n\n' +
+            '**테스트 시나리오:**\n' +
+            '- ✅ 정상: 협의 완료',
     })
     @ApiResponse({ status: 200, description: '협의 완료 성공', type: ApprovalActionResponseDto })
     @ApiResponse({ status: 400, description: '잘못된 요청 (대기 중인 협의만 완료 가능)' })
     @ApiResponse({ status: 403, description: '권한 없음' })
-    @ApiResponse({ status: 404, description: '협의 단계를 찾을 수 없음' })
+    @ApiResponse({ status: 404, description: '문서 또는 협의 단계를 찾을 수 없음' })
     async completeAgreement(@User() user: Employee, @Body() dto: CompleteAgreementDto) {
         return await this.approvalProcessService.completeAgreement(dto, user.id);
     }

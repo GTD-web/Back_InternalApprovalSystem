@@ -84,7 +84,7 @@ export class ApprovalProcessService {
      * 협의 완료
      */
     async completeAgreement(dto: CompleteAgreementDto, agreerId: string) {
-        this.logger.log(`협의 완료 요청: ${dto.stepSnapshotId}`);
+        this.logger.log(`협의 완료 요청: ${dto.documentId}`);
 
         const result = await withTransaction(this.dataSource, async (queryRunner) => {
             return await this.approvalProcessContext.completeAgreement(
