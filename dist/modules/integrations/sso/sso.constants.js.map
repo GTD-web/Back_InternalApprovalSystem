@@ -1,1 +1,0 @@
-{"version":3,"file":"sso.constants.js","sourceRoot":"","sources":["../../../../src/modules/integrations/sso/sso.constants.ts"],"names":[],"mappings":";;;AAGa,QAAA,UAAU,GAAG,YAAY,CAAC;AAE1B,QAAA,UAAU,GAAG;IACtB,QAAQ,EAAE,OAAO,CAAC,GAAG,CAAC,WAAW,IAAI,yBAAyB;IAC9D,SAAS,EAAE,OAAO,CAAC,GAAG,CAAC,aAAa;IACpC,aAAa,EAAE,OAAO,CAAC,GAAG,CAAC,iBAAiB;CAC/C,CAAC"}
