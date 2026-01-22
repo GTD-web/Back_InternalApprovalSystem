@@ -67,11 +67,15 @@ export class ApprovalProcessContext {
         this.logger.log(`협의 완료 시작: ${dto.stepSnapshotId}`);
 
         // 1) Step 조회
-        const step = await this.approvalStepSnapshotService.findOneWithError({
-            where: { id: dto.stepSnapshotId },
+        const step = await this.approvalStepSnapshotService.findOne({
+            where: { id: dto.stepSnapshotId, approverId: dto.agreerId },
             relations: ['approver', 'document'],
             queryRunner,
         });
+
+        if (!step) {
+            throw new NotFoundException('요청된 직원이 결재자로 있는 협의 단계를 찾을 수 없습니다.');
+        }
 
         // 2) 정책 검증: 수신자 액션 가능 여부
         DocumentPolicyValidator.validateReceiverActionOrThrow(
@@ -79,11 +83,6 @@ export class ApprovalProcessContext {
             step.document.status,
             ReceiverAction.APPROVE,
         );
-
-        // 3) 권한 확인
-        if (step.approverId !== dto.agreerId) {
-            throw new ForbiddenException('해당 협의를 완료할 권한이 없습니다.');
-        }
 
         // 4) 단계 타입 확인
         if (step.stepType !== ApprovalStepType.AGREEMENT) {
