@@ -11,11 +11,13 @@ export class ApproveStepDto {
 
 /**
  * 결재취소 응답 DTO
+ * isDrafterFirstApprover: true이면 비즈니스 레이어에서 상신취소(상신을취소한다) 호출 필요
  */
 export class CancelApprovalStepResultDto {
     stepSnapshotId: string;
     documentId: string;
     message: string;
+    isDrafterFirstApprover?: boolean;
 }
 
 /**
@@ -48,12 +50,12 @@ export class CompleteImplementationDto {
 
 /**
  * 상신취소 DTO (기안자용)
- * 정책: 결재진행중이고 결재자가 아직 어떤 처리도 하지 않은 상태일 때만 가능
+ * 정책: 결재 진행 중(PENDING) 문서만 취소 가능, 기안자만 호출 가능
  */
 export class CancelSubmitDto {
     documentId: string;
-    drafterId: string; // 기안자 ID
-    reason: string; // 취소 사유
+    drafterId: string; // 기안자 ID (보통 로그인 사용자 ID)
+    reason?: string; // 취소 사유 (없으면 기본값 저장)
 }
 
 /**

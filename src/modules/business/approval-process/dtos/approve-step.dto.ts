@@ -2,11 +2,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsUUID, IsString, IsOptional } from 'class-validator';
 
 /**
- * 결재 승인 DTO
+ * 결재 승인 / 협의 완료 DTO (통합)
  */
 export class ApproveStepDto {
     @ApiProperty({
-        description: '결재 단계 스냅샷 ID',
+        description: '결재 또는 협의 단계 스냅샷 ID (결재면 승인, 협의면 완료 처리)',
         example: 'uuid',
     })
     @IsUUID()

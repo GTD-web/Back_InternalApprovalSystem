@@ -52,65 +52,33 @@ import { Employee } from '../../../domain/employee/employee.entity';
 export class DocumentController {
     constructor(private readonly documentService: DocumentService) {}
 
-    @Post()
-    @HttpCode(HttpStatus.CREATED)
-    @ApiOperation({
-        summary: '문서 생성 (임시저장)',
-        description:
-            '문서를 임시저장 상태로 생성합니다.\n\n' +
-            '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 문서 생성\n' +
-            '- ❌ 실패: 필수 필드 누락 (drafterId)\n' +
-            '- ❌ 실패: 존재하지 않는 documentTemplateId',
-    })
-    @ApiResponse({
-        status: 201,
-        description: '문서 생성 성공',
-        type: DocumentResponseDto,
-    })
-    @ApiResponse({
-        status: 400,
-        description: '잘못된 요청',
-    })
-    @ApiResponse({
-        status: 401,
-        description: '인증 실패',
-    })
-    async createDocument(@User() user: Employee, @Body() dto: CreateDocumentDto) {
-        return await this.documentService.createDocument(dto, user.id);
-    }
-
     @Get('my-all/statistics')
     @ApiOperation({
         summary: '내 전체 문서 통계 조회 (사이드바용)',
         description:
-            '사이드바 표시를 위한 통계를 조회합니다.\n\n' +
+            '사이드바 표시를 위한 결재함별 문서 개수를 조회합니다.\n\n' +
             '**응답 형식:**\n' +
             '```json\n' +
             '{\n' +
-            '  "DRAFT": 1,                  // 임시저장 (내가 임시 저장한 문서, DRAFT 상태)\n' +
-            '  "PENDING": 10,               // 결재 진행중 (내가 상신한 문서, PENDING 상태)\n' +
-            '  "RECEIVED": 15,              // 수신함 (내가 결재라인에 있지만 현재 내 차례가 아닌 문서)\n' +
-            '  "PENDING_AGREEMENT": 1,      // 합의함 (현재 내가 협의해야 하는 문서)\n' +
-            '  "PENDING_APPROVAL": 2,       // 결재함 (현재 내가 결재해야 하는 문서)\n' +
-            '  "IMPLEMENTATION": 1,         // 시행함 (현재 내가 시행해야 하는 문서)\n' +
-            '  "APPROVED": 20,              // 기결함 (내가 관련된 모든 결재 완료 문서, APPROVED/IMPLEMENTED)\n' +
-            '  "REJECTED": 3,               // 반려함 (내가 관련된 모든 반려 문서, REJECTED)\n' +
-            '  "RECEIVED_REFERENCE": 23     // 수신참조함 (내가 참조자로 있는 문서, IMPLEMENTED 상태만)\n' +
+            '  "DRAFT": 1,                  // 임시저장함 (나의 상신 전 문서, DRAFT)\n' +
+            '  "RECEIVED": 15,              // 수신함 (아직 내 차례가 아닌 문서, 내 앞에 PENDING 단계 있음)\n' +
+            '  "PENDING": 10,               // 상신함 (나의 상신한 모든 문서, DRAFT 제외)\n' +
+            '  "PENDING_MINE": 3,           // 미결함 (지금 내가 결재·협의해야 하는 문서)\n' +
+            '  "IMPLEMENTATION": 1,         // 시행함 (지금 내가 시행해야 하는 문서)\n' +
+            '  "APPROVED": 20,              // 기결함 (기안한 문서 중 결재·시행 완료 + 내가 승인한 문서)\n' +
+            '  "REJECTED": 3,               // 반려함 (내가 합의·결재자로 있는 문서 중 반려된 문서)\n' +
+            '  "RECEIVED_REFERENCE": 23    // 수신참조함 (내가 수신참조자로 지정된 문서, 문서상태 무관)\n' +
             '}\n' +
             '```\n\n' +
             '**필터별 상세 설명:**\n' +
-            '- DRAFT: 내가 임시 저장한 문서 (문서 상태: DRAFT)\n' +
-            '- PENDING: 내가 상신한 결재 진행중 문서 (문서 상태: PENDING)\n' +
-            '- RECEIVED: 내가 결재라인에 있지만 현재 내 차례가 아닌 문서\n' +
-            '  * 아직 내 차례가 아닌 것 (앞에 PENDING 단계 있음)\n' +
-            '  * 이미 내가 처리한 것 (내 단계가 APPROVED)\n' +
-            '- PENDING_AGREEMENT: 현재 내가 협의해야 하는 문서 (내 차례, 내 앞에 PENDING 없음)\n' +
-            '- PENDING_APPROVAL: 현재 내가 결재해야 하는 문서 (내 차례, 내 앞에 PENDING 없음)\n' +
-            '- IMPLEMENTATION: 현재 내가 시행해야 하는 문서 (시행 단계가 PENDING)\n' +
-            '- APPROVED: 내가 기안했거나 결재라인에 속한 모든 결재 완료 문서 (APPROVED/IMPLEMENTED)\n' +
-            '- REJECTED: 내가 기안했거나 결재라인에 속했지만 반려된 문서 (REJECTED)\n' +
-            '- RECEIVED_REFERENCE: 내가 참조자로 있는 문서 (IMPLEMENTED 상태만)\n\n' +
+            '- DRAFT: 임시저장함 — 내가 임시 저장한 문서 (문서 상태: DRAFT)\n' +
+            '- RECEIVED: 수신함 — 아직 내 차례가 아닌 문서만 (내 앞에 PENDING 단계가 있는 문서, 결재진행중)\n' +
+            '- PENDING: 상신함 — 내가 상신한 모든 문서 (DRAFT 제외, 전체 상태)\n' +
+            '- PENDING_MINE: 미결함 — 결재 진행 중이며, 내가 합의·결재 단계에서 대기 중이고 앞선 단계가 모두 승인된 문서\n' +
+            '- IMPLEMENTATION: 시행함 — 문서 승인완료(APPROVED)이며, 내 시행 단계가 대기 중인 문서\n' +
+            '- APPROVED: 기결함 — 내가 기안한 문서 중 승인완료·시행완료 + 내가 합의·결재에 승인한 문서(결재진행중/승인완료/시행완료)\n' +
+            '- REJECTED: 반려함 — 내가 합의·결재자로 참여한 문서 중 반려(REJECTED)된 문서\n' +
+            '- RECEIVED_REFERENCE: 수신참조함 — 내가 수신참조자로 지정된 문서 (문서 상태 무관)\n\n' +
             '**테스트 시나리오:**\n' +
             '- ✅ 정상: 문서 통계 조회\n' +
             '- ❌ 실패: 존재하지 않는 사용자 ID',
@@ -132,53 +100,30 @@ export class DocumentController {
     @ApiOperation({
         summary: '내 전체 문서 목록 조회 (통계와 동일한 필터)',
         description:
-            '통계 조회와 동일한 필터로 실제 문서 목록을 조회합니다.\n\n' +
+            '통계 조회와 동일한 필터로 결재함별 문서 목록을 조회합니다.\n\n' +
             '**필터 타입 (filterType):**\n' +
-            '- DRAFT: 임시저장 (내가 임시 저장한 문서, DRAFT 상태)\n' +
-            '- PENDING: 상신함 (내가 상신한 문서, DRAFT 제외 모든 상태)\n' +
-            '- RECEIVED: 수신함 (내가 결재라인에 있지만 현재 내 차례가 아닌 문서)\n' +
-            '  * 아직 내 차례가 아닌 것 (앞에 PENDING 단계 있음)\n' +
-            '  * 이미 내가 처리한 것 (내 단계가 APPROVED)\n' +
-            '- PENDING_AGREEMENT: 합의함 (내가 합의자로 있는 문서)\n' +
-            '- PENDING_APPROVAL: 결재함 (현재 내가 결재해야 하는 문서)\n' +
-            '- IMPLEMENTATION: 시행함 (현재 내가 시행해야 하는 문서, 시행 단계가 PENDING)\n' +
-            '- APPROVED: 기결함 (내가 관련된 모든 결재 완료 문서, APPROVED/IMPLEMENTED)\n' +
-            '  * 내가 기안한 결재 완료 문서\n' +
-            '  * 내가 결재라인에 속한 결재 완료 문서\n' +
-            '- REJECTED: 반려함 (내가 관련된 모든 반려 문서, REJECTED)\n' +
-            '  * 내가 기안한 반려 문서\n' +
-            '  * 내가 결재라인에 속했지만 반려된 문서\n' +
-            '- RECEIVED_REFERENCE: 수신참조함 (내가 참조자로 있는 문서, IMPLEMENTED 상태만)\n' +
+            '- DRAFT: 임시저장함 — 내가 임시 저장한 문서 (DRAFT)\n' +
+            '- RECEIVED: 수신함 — 아직 내 차례가 아닌 문서만 (내 앞에 PENDING 단계가 있는 문서)\n' +
+            '- PENDING: 상신함 — 내가 상신한 모든 문서 (DRAFT 제외)\n' +
+            '- PENDING_MINE: 미결함 — 지금 내가 결재·협의해야 하는 문서 (합의·결재 대기, 앞선 단계 모두 승인)\n' +
+            '- PENDING_APPROVAL: 결재함 (세부) — 내가 결재해야 하는 문서만\n' +
+            '- IMPLEMENTATION: 시행함 — 문서 승인완료이며 내 시행 단계가 대기 중인 문서\n' +
+            '- APPROVED: 기결함 — 내가 기안한 문서 중 승인·시행 완료 + 내가 합의·결재에 승인한 문서 (drafterFilter 옵션 사용)\n' +
+            '- REJECTED: 반려함 — 내가 합의·결재자로 있는 문서 중 반려된 문서\n' +
+            '- RECEIVED_REFERENCE: 수신참조함 — 내가 수신참조자로 지정된 문서 (문서 상태 무관)\n' +
             '- 미지정: 내가 기안한 문서 + 내가 참여하는 문서 전체\n\n' +
             '**상신함 문서 상태 필터 (pendingStatusFilter) - PENDING에만 적용:**\n' +
-            '- PENDING: 결재 진행중인 문서만\n' +
-            '- APPROVED: 결재 완료된 문서만\n' +
-            '- REJECTED: 반려된 문서만\n' +
-            '- CANCELLED: 취소된 문서만\n' +
-            '- IMPLEMENTED: 시행 완료된 문서만\n' +
-            '- 미지정: DRAFT를 제외한 모든 상태\n\n' +
-            '**합의함 단계 상태 필터 (agreementStepStatus) - PENDING_AGREEMENT에만 적용:**\n' +
-            '- SCHEDULED: 아직 내 차례가 아닌 상태\n' +
-            '- PENDING: 내 차례인 상태 (현재 합의 대기)\n' +
-            '- COMPLETED: 내 차례가 완료된 상태 (이미 합의 완료)\n' +
-            '- 미지정: 모든 상태\n\n' +
+            '- PENDING, APPROVED, REJECTED, CANCELLED, IMPLEMENTED: 해당 상태만\n' +
+            '- 미지정: DRAFT 제외 전체\n\n' +
             '**수신함 단계 타입 필터 (receivedStepType) - RECEIVED에만 적용:**\n' +
-            '- AGREEMENT: 합의 단계로 수신한 문서만\n' +
-            '- APPROVAL: 결재 단계로 수신한 문서만\n' +
-            '- 미지정: 모든 수신 문서 (합의 + 결재)\n\n' +
-            '**기안자 필터 (drafterFilter) - APPROVED, REJECTED에만 적용:**\n' +
-            '- MY_DRAFT: 내가 기안한 문서만\n' +
-            '- PARTICIPATED: 내가 참여한 문서만 (기안자가 아닌 경우)\n' +
-            '- 미지정: 모든 문서 (기안 + 참여)\n\n' +
+            '- AGREEMENT, APPROVAL, 미지정\n\n' +
+            '**기안자 필터 (drafterFilter) - APPROVED에만 적용:**\n' +
+            '- MY_DRAFT: 내가 기안한 문서만 (승인·시행 완료)\n' +
+            '- PARTICIPATED: 내가 참여(합의·결재 승인)한 문서만\n' +
+            '- 미지정: 기안 + 참여 모두\n\n' +
             '**열람 상태 필터 (referenceReadStatus) - RECEIVED_REFERENCE에만 적용:**\n' +
-            '- READ: 열람한 문서\n' +
-            '- UNREAD: 열람하지 않은 문서\n' +
-            '- 미지정: 모든 참조 문서\n\n' +
-            '**추가 필터링:**\n' +
-            '- searchKeyword: 문서 제목 또는 템플릿 이름 검색\n' +
-            '- startDate, endDate: 제출일 구분\n' +
-            '- sortOrder: 정렬 순서 (LATEST: 최신순, OLDEST: 오래된순)\n' +
-            '- page, limit: 페이징',
+            '- READ / UNREAD / 미지정\n\n' +
+            '**추가 필터링:** searchKeyword, startDate, endDate, sortOrder, page, limit',
     })
     @ApiResponse({
         status: 200,
@@ -197,7 +142,6 @@ export class DocumentController {
             drafterFilter: query.drafterFilter,
             referenceReadStatus: query.referenceReadStatus,
             pendingStatusFilter: query.pendingStatusFilter,
-            agreementStepStatus: query.agreementStepStatus,
             searchKeyword: query.searchKeyword,
             startDate: query.startDate ? new Date(query.startDate) : undefined,
             endDate: query.endDate ? new Date(query.endDate) : undefined,
@@ -265,14 +209,178 @@ export class DocumentController {
         return await this.documentService.getMyDrafts(user.id, page || 1, limit || 20, draftFilter);
     }
 
+    @Get('statistics/:userId')
+    @ApiOperation({
+        summary: '문서 통계 조회',
+        description:
+            '사용자의 문서 통계를 조회합니다.\n\n' +
+            '**내가 기안한 문서 통계:**\n' +
+            '- 상신: 제출된 전체 문서\n' +
+            '- 협의: PENDING 상태 + 현재 AGREEMENT 단계\n' +
+            '- 미결: PENDING 상태 + 현재 APPROVAL 단계\n' +
+            '- 기결: APPROVED 상태\n' +
+            '- 반려: REJECTED 상태\n' +
+            '- 시행: IMPLEMENTED 상태\n' +
+            '- 임시저장: DRAFT 상태\n\n' +
+            '**다른 사람이 기안한 문서:**\n' +
+            '- 참조: 내가 참조자(REFERENCE)로 있는 문서\n\n' +
+            '**테스트 시나리오:**\n' +
+            '- ✅ 정상: 문서 통계 조회\n' +
+            '- ❌ 실패: 존재하지 않는 사용자 ID',
+    })
+    @ApiParam({
+        name: 'userId',
+        description: '사용자 ID',
+    })
+    @ApiResponse({
+        status: 200,
+        description: '문서 통계 조회 성공',
+        type: DocumentStatisticsResponseDto,
+    })
+    @ApiResponse({
+        status: 401,
+        description: '인증 실패',
+    })
+    async getDocumentStatistics(@Param('userId') userId: string) {
+        return await this.documentService.getDocumentStatistics(userId);
+    }
+
+    @Get('templates/:templateId')
+    @ApiOperation({
+        summary: '새 문서 작성용 템플릿 상세 조회',
+        description:
+            '새 문서 작성 시 사용할 템플릿의 상세 정보를 조회합니다. AssigneeRule을 기반으로 실제 적용될 결재자 정보가 맵핑되어 반환됩니다.\n\n' +
+            '현재 로그인한 사용자를 기안자로 하여 결재자 정보를 맵핑합니다.\n\n' +
+            '**테스트 시나리오:**\n' +
+            '- ✅ 정상: 템플릿 상세 조회\n' +
+            '- ❌ 실패: 존재하지 않는 템플릿 ID\n' +
+            '- ❌ 실패: 인증 토큰 없음 (401 반환)',
+    })
+    @ApiParam({
+        name: 'templateId',
+        description: '문서 템플릿 ID',
+    })
+    @ApiResponse({
+        status: 200,
+        description: '템플릿 상세 조회 성공 (결재자 정보 맵핑 포함)',
+        type: DocumentTemplateWithApproversResponseDto,
+    })
+    @ApiResponse({
+        status: 404,
+        description: '템플릿 또는 기안자를 찾을 수 없음',
+    })
+    @ApiResponse({
+        status: 400,
+        description: '잘못된 요청 (기안자의 부서/직책 정보 없음)',
+    })
+    @ApiResponse({
+        status: 401,
+        description: '인증 실패',
+    })
+    async getTemplateForNewDocument(@Param('templateId') templateId: string, @User() user: Employee) {
+        return await this.documentService.getTemplateForNewDocument(templateId, user.id);
+    }
+
+    @Post()
+    @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({
+        summary: '문서 생성 (임시저장)',
+        description:
+            '문서를 임시저장 상태로 생성합니다.\n\n' +
+            '**테스트 시나리오:**\n' +
+            '- ✅ 정상: 문서 생성\n' +
+            '- ❌ 실패: 필수 필드 누락 (drafterId)\n' +
+            '- ❌ 실패: 존재하지 않는 documentTemplateId',
+    })
+    @ApiResponse({
+        status: 201,
+        description: '문서 생성 성공',
+        type: DocumentResponseDto,
+    })
+    @ApiResponse({
+        status: 400,
+        description: '잘못된 요청',
+    })
+    @ApiResponse({
+        status: 401,
+        description: '인증 실패',
+    })
+    async createDocument(@User() user: Employee, @Body() dto: CreateDocumentDto) {
+        return await this.documentService.createDocument(dto, user.id);
+    }
+
+    @Post(':documentId/submit')
+    @ApiOperation({
+        summary: '문서 기안',
+        description:
+            '임시저장된 문서를 기안합니다.\n\n' +
+            '**테스트 시나리오:**\n' +
+            '- ✅ 정상: 문서 기안\n' +
+            '- ❌ 실패: 이미 제출된 문서 재제출',
+    })
+    @ApiParam({
+        name: 'documentId',
+        description: '기안할 문서 ID',
+    })
+    @ApiResponse({
+        status: 200,
+        description: '문서 기안 성공',
+        type: SubmitDocumentResponseDto,
+    })
+    @ApiResponse({
+        status: 404,
+        description: '문서를 찾을 수 없음',
+    })
+    @ApiResponse({
+        status: 400,
+        description: '잘못된 요청 (임시저장 상태가 아님)',
+    })
+    @ApiResponse({
+        status: 401,
+        description: '인증 실패',
+    })
+    async submitDocument(@Param('documentId') documentId: string, @Body() dto: SubmitDocumentBodyDto) {
+        return await this.documentService.submitDocument({
+            documentId,
+            ...dto,
+        });
+    }
+
+    @Post('submit-direct')
+    @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({
+        summary: '바로 기안',
+        description:
+            '임시저장 단계를 건너뛰고 바로 기안합니다. 내부적으로 임시저장 후 기안하는 방식으로 처리됩니다.\n\n' +
+            '**테스트 시나리오:**\n' +
+            '- ✅ 정상: 바로 기안\n' +
+            '- ❌ 실패: 결재선 누락',
+    })
+    @ApiResponse({
+        status: 201,
+        description: '문서 기안 성공',
+        type: SubmitDocumentResponseDto,
+    })
+    @ApiResponse({
+        status: 400,
+        description: '잘못된 요청',
+    })
+    @ApiResponse({
+        status: 401,
+        description: '인증 실패',
+    })
+    async submitDocumentDirect(@User() user: Employee, @Body() dto: SubmitDocumentDirectDto) {
+        return await this.documentService.submitDocumentDirect(dto, user.id);
+    }
+
     @Get(':documentId')
     @ApiOperation({
         summary: '문서 상세 조회',
         description:
-            '특정 문서의 상세 정보를 조회합니다.\n\n' +
-            '**결재취소 가능 여부:**\n' +
-            '- 각 결재 스텝에 `canCancelApproval` 필드가 포함됩니다.\n' +
-            '- 조건: 문서가 결재진행중(PENDING)이고, 본인이 승인했으며, 다음 단계 수신자가 아직 미처리 상태일 때 true\n\n' +
+            '특정 문서의 상세 정보를 조회합니다. 로그인 사용자로 조회 시 응답에 `actionButtons`가 포함됩니다.\n\n' +
+            '**actionButtons:**\n' +
+            '- 현재 사용자 기준으로 노출할 액션 버튼 타입 배열 (DRAFT, MODIFY, STEP_PENDING, STEP_APPROVED, IMPLEMENTATION)\n' +
+            '- 문서 상태·결재선·역할에 따라 계산됨\n\n' +
             '**테스트 시나리오:**\n' +
             '- ✅ 정상: 문서 상세 조회\n' +
             '- ❌ 실패: 존재하지 않는 문서 ID',
@@ -377,183 +485,6 @@ export class DocumentController {
     })
     async deleteDocument(@Param('documentId') documentId: string) {
         await this.documentService.deleteDocument(documentId);
-    }
-
-    @Post(':documentId/submit')
-    @ApiOperation({
-        summary: '문서 기안',
-        description:
-            '임시저장된 문서를 기안합니다.\n\n' +
-            '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 문서 기안\n' +
-            '- ❌ 실패: 이미 제출된 문서 재제출',
-    })
-    @ApiParam({
-        name: 'documentId',
-        description: '기안할 문서 ID',
-    })
-    @ApiResponse({
-        status: 200,
-        description: '문서 기안 성공',
-        type: SubmitDocumentResponseDto,
-    })
-    @ApiResponse({
-        status: 404,
-        description: '문서를 찾을 수 없음',
-    })
-    @ApiResponse({
-        status: 400,
-        description: '잘못된 요청 (임시저장 상태가 아님)',
-    })
-    @ApiResponse({
-        status: 401,
-        description: '인증 실패',
-    })
-    async submitDocument(@Param('documentId') documentId: string, @Body() dto: SubmitDocumentBodyDto) {
-        return await this.documentService.submitDocument({
-            documentId,
-            ...dto,
-        });
-    }
-
-    @Post(':documentId/cancel-submit')
-    @HttpCode(HttpStatus.OK)
-    @ApiOperation({
-        summary: '상신취소 (기안자용)',
-        description:
-            '기안자가 상신한 문서를 취소합니다.\n\n' +
-            '**정책:**\n' +
-            '- 결재진행중(PENDING) 상태의 문서만 취소 가능\n' +
-            '- 결재자가 아직 어떤 처리도 하지 않은 상태에서만 가능\n' +
-            '- 취소 시 문서 상태가 CANCELLED로 변경됨\n\n' +
-            '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 결재자 처리 전 상신취소\n' +
-            '- ❌ 실패: 결재자가 처리한 후 상신취소 시도\n' +
-            '- ❌ 실패: 기안자가 아닌 사용자의 상신취소 시도\n' +
-            '- ❌ 실패: 취소 사유 누락',
-    })
-    @ApiParam({
-        name: 'documentId',
-        description: '상신취소할 문서 ID',
-    })
-    @ApiResponse({
-        status: 200,
-        description: '상신 취소 성공',
-        type: DocumentResponseDto,
-    })
-    @ApiResponse({
-        status: 400,
-        description: '잘못된 요청 (결재 진행 중인 문서만 취소 가능, 이미 처리된 결재 있음)',
-    })
-    @ApiResponse({
-        status: 403,
-        description: '권한 없음 (기안자만 상신취소 가능)',
-    })
-    @ApiResponse({
-        status: 404,
-        description: '문서를 찾을 수 없음',
-    })
-    async cancelSubmit(@User() user: Employee, @Param('documentId') documentId: string, @Body() dto: CancelSubmitDto) {
-        return await this.documentService.cancelSubmit(documentId, user.id, dto.reason);
-    }
-
-    @Post('submit-direct')
-    @HttpCode(HttpStatus.CREATED)
-    @ApiOperation({
-        summary: '바로 기안',
-        description:
-            '임시저장 단계를 건너뛰고 바로 기안합니다. 내부적으로 임시저장 후 기안하는 방식으로 처리됩니다.\n\n' +
-            '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 바로 기안\n' +
-            '- ❌ 실패: 결재선 누락',
-    })
-    @ApiResponse({
-        status: 201,
-        description: '문서 기안 성공',
-        type: SubmitDocumentResponseDto,
-    })
-    @ApiResponse({
-        status: 400,
-        description: '잘못된 요청',
-    })
-    @ApiResponse({
-        status: 401,
-        description: '인증 실패',
-    })
-    async submitDocumentDirect(@User() user: Employee, @Body() dto: SubmitDocumentDirectDto) {
-        return await this.documentService.submitDocumentDirect(dto, user.id);
-    }
-
-    @Get('templates/:templateId')
-    @ApiOperation({
-        summary: '새 문서 작성용 템플릿 상세 조회',
-        description:
-            '새 문서 작성 시 사용할 템플릿의 상세 정보를 조회합니다. AssigneeRule을 기반으로 실제 적용될 결재자 정보가 맵핑되어 반환됩니다.\n\n' +
-            '현재 로그인한 사용자를 기안자로 하여 결재자 정보를 맵핑합니다.\n\n' +
-            '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 템플릿 상세 조회\n' +
-            '- ❌ 실패: 존재하지 않는 템플릿 ID\n' +
-            '- ❌ 실패: 인증 토큰 없음 (401 반환)',
-    })
-    @ApiParam({
-        name: 'templateId',
-        description: '문서 템플릿 ID',
-    })
-    @ApiResponse({
-        status: 200,
-        description: '템플릿 상세 조회 성공 (결재자 정보 맵핑 포함)',
-        type: DocumentTemplateWithApproversResponseDto,
-    })
-    @ApiResponse({
-        status: 404,
-        description: '템플릿 또는 기안자를 찾을 수 없음',
-    })
-    @ApiResponse({
-        status: 400,
-        description: '잘못된 요청 (기안자의 부서/직책 정보 없음)',
-    })
-    @ApiResponse({
-        status: 401,
-        description: '인증 실패',
-    })
-    async getTemplateForNewDocument(@Param('templateId') templateId: string, @User() user: Employee) {
-        return await this.documentService.getTemplateForNewDocument(templateId, user.id);
-    }
-
-    @Get('statistics/:userId')
-    @ApiOperation({
-        summary: '문서 통계 조회',
-        description:
-            '사용자의 문서 통계를 조회합니다.\n\n' +
-            '**내가 기안한 문서 통계:**\n' +
-            '- 상신: 제출된 전체 문서\n' +
-            '- 협의: PENDING 상태 + 현재 AGREEMENT 단계\n' +
-            '- 미결: PENDING 상태 + 현재 APPROVAL 단계\n' +
-            '- 기결: APPROVED 상태\n' +
-            '- 반려: REJECTED 상태\n' +
-            '- 시행: IMPLEMENTED 상태\n' +
-            '- 임시저장: DRAFT 상태\n\n' +
-            '**다른 사람이 기안한 문서:**\n' +
-            '- 참조: 내가 참조자(REFERENCE)로 있는 문서\n\n' +
-            '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 문서 통계 조회\n' +
-            '- ❌ 실패: 존재하지 않는 사용자 ID',
-    })
-    @ApiParam({
-        name: 'userId',
-        description: '사용자 ID',
-    })
-    @ApiResponse({
-        status: 200,
-        description: '문서 통계 조회 성공',
-        type: DocumentStatisticsResponseDto,
-    })
-    @ApiResponse({
-        status: 401,
-        description: '인증 실패',
-    })
-    async getDocumentStatistics(@Param('userId') userId: string) {
-        return await this.documentService.getDocumentStatistics(userId);
     }
 
     // ==================== 코멘트 관련 API ====================

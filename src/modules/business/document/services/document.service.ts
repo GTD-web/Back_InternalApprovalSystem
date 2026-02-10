@@ -9,6 +9,7 @@ import { CommentNotificationService } from '../../../context/notification/commen
 import { CommentContext } from '../../../context/comment/comment.context';
 import {
     CreateDocumentDto,
+    DocumentResponseDto,
     UpdateDocumentDto,
     SubmitDocumentDto,
     SubmitDocumentDirectDto,
@@ -24,6 +25,7 @@ import { withTransaction } from 'src/common/utils/transaction.util';
 import { DataSource } from 'typeorm';
 import { ApproverMappingService } from 'src/modules/context/template/approver-mapping.service';
 import { DocumentPolicyValidator, DrafterAction } from 'src/common/utils/document-policy.validator';
+import { getDocumentActionButtons } from 'src/common/utils/document-action-buttons.util';
 
 /**
  * 문서 비즈니스 서비스
@@ -131,11 +133,17 @@ export class DocumentService {
     /**
      * 문서 조회 (단건)
      * @param documentId 문서 ID
-     * @param userId 현재 사용자 ID (결재취소 가능 여부 계산용, 선택적)
+     * @param userId 현재 사용자 ID (액션 버튼 계산용, 선택적)
+     * @returns DocumentResponseDto (userId 있으면 actionButtons 포함)
      */
-    async getDocument(documentId: string, userId?: string) {
+    async getDocument(documentId: string, userId?: string): Promise<DocumentResponseDto> {
         this.logger.debug(`문서 조회: ${documentId}, 사용자: ${userId || 'N/A'}`);
-        return await this.documentQueryService.getDocument(documentId, userId);
+        const document = await this.documentQueryService.getDocument(documentId);
+        if (!userId) {
+            return document;
+        }
+        const actionButtons = getDocumentActionButtons(document, userId);
+        return { ...document, actionButtons };
     }
 
     /**
@@ -238,25 +246,6 @@ export class DocumentService {
     }
 
     /**
-     * 상신취소 (기안자용)
-     * 정책: 결재진행중이고 결재자가 아직 어떤 처리도 하지 않은 상태일 때만 가능
-     */
-    async cancelSubmit(documentId: string, drafterId: string, reason: string) {
-        this.logger.log(`상신 취소 요청: ${documentId}, 기안자: ${drafterId}`);
-
-        return await withTransaction(this.dataSource, async (queryRunner) => {
-            return await this.documentContext.상신을취소한다(
-                {
-                    documentId,
-                    drafterId,
-                    reason,
-                },
-                queryRunner,
-            );
-        });
-    }
-
-    /**
      * 문서 기안 알림 전송 (private)
      */
     private async sendSubmitNotification(documentId: string, drafterId: string): Promise<void> {
@@ -326,7 +315,6 @@ export class DocumentService {
         drafterFilter?: string;
         referenceReadStatus?: string;
         pendingStatusFilter?: string;
-        agreementStepStatus?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;

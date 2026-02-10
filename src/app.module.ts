@@ -26,6 +26,7 @@ import { DocumentBusinessModule } from './modules/business/document/document.mod
 import { ApprovalProcessBusinessModule } from './modules/business/approval-process/approval-process.module';
 import { SSOModule } from './modules/integrations/sso';
 import { NotificationModule } from './modules/integrations/notification';
+import { SeedModule } from './modules/integrations/seed';
 import { NotificationContextModule } from './modules/context/notification';
 
 @Module({
@@ -78,6 +79,7 @@ import { NotificationContextModule } from './modules/context/notification';
         MetadataModule,
         DocumentBusinessModule,
         ApprovalProcessBusinessModule,
+        SeedModule, // 시드/전체삭제 (플로우·결재함 테스트용)
         // ApprovalFlowBusinessModule,
         // DocumentBusinessModule,
         // ApprovalProcessBusinessModule,

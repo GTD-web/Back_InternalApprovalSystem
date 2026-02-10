@@ -5,16 +5,12 @@ import { ApprovalProcessService } from '../services/approval-process.service';
 import {
     ApproveStepDto,
     RejectStepDto,
-    CompleteAgreementDto,
     CompleteImplementationDto,
-    CancelApprovalDto,
     CancelApprovalStepDto,
     MarkReferenceReadDto,
     ProcessApprovalActionDto,
     ApprovalActionResponseDto,
-    PendingApprovalItemDto,
     DocumentApprovalStepsResponseDto,
-    CancelApprovalResponseDto,
     QueryMyPendingDto,
     PaginatedPendingApprovalsResponseDto,
 } from '../dtos';
@@ -29,45 +25,27 @@ export class ApprovalProcessController {
     constructor(private readonly approvalProcessService: ApprovalProcessService) {}
 
     /**
-     * 협의 완료
-     */
-    @Post('complete-agreement')
-    @HttpCode(HttpStatus.OK)
-    @ApiOperation({
-        summary: '협의 완료',
-        description:
-            '협의 단계를 완료 처리합니다. 협의는 순서에 상관없이 처리 가능하므로 문서 ID를 기준으로 조회합니다.\n\n' +
-            '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 협의 완료',
-    })
-    @ApiResponse({ status: 200, description: '협의 완료 성공', type: ApprovalActionResponseDto })
-    @ApiResponse({ status: 400, description: '잘못된 요청 (대기 중인 협의만 완료 가능)' })
-    @ApiResponse({ status: 403, description: '권한 없음' })
-    @ApiResponse({ status: 404, description: '문서 또는 협의 단계를 찾을 수 없음' })
-    async completeAgreement(@User() user: Employee, @Body() dto: CompleteAgreementDto) {
-        return await this.approvalProcessService.completeAgreement(dto, user.id);
-    }
-
-    /**
-     * 결재 승인
+     * 결재 승인 / 협의 완료 (통합)
+     * stepSnapshotId에 해당하는 단계가 결재(APPROVAL)면 승인, 협의(AGREEMENT)면 완료 처리
      */
     @Post('approve')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
-        summary: '결재 승인',
+        summary: '결재 승인 / 협의 완료',
         description:
-            '결재 단계를 승인합니다.\n\n' +
+            '결재 단계를 승인하거나 협의 단계를 완료합니다. stepSnapshotId로 대상 단계를 지정하면, 단계 타입에 따라 결재는 승인, 협의는 완료로 처리됩니다.\n\n' +
             '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 결재 승인 성공\n' +
-            '- ❌ 실패: 권한 없는 사용자의 승인 시도\n' +
+            '- ✅ 정상: 결재 승인\n' +
+            '- ✅ 정상: 협의 완료\n' +
+            '- ❌ 실패: 권한 없는 사용자\n' +
             '- ❌ 실패: 존재하지 않는 stepSnapshotId',
     })
-    @ApiResponse({ status: 200, description: '결재 승인 성공', type: ApprovalActionResponseDto })
-    @ApiResponse({ status: 400, description: '잘못된 요청 (대기 중인 결재만 승인 가능, 순서 검증 실패 등)' })
+    @ApiResponse({ status: 200, description: '승인/협의완료 성공', type: ApprovalActionResponseDto })
+    @ApiResponse({ status: 400, description: '잘못된 요청 (대기 중인 단계만 가능, 순서 검증 실패 등)' })
     @ApiResponse({ status: 403, description: '권한 없음' })
-    @ApiResponse({ status: 404, description: '결재 단계를 찾을 수 없음' })
+    @ApiResponse({ status: 404, description: '결재/협의 단계를 찾을 수 없음' })
     async approveStep(@User() user: Employee, @Body() dto: ApproveStepDto) {
-        return await this.approvalProcessService.approveStep(dto, user.id);
+        return await this.approvalProcessService.approveStepOrCompleteAgreement(dto, user.id);
     }
 
     /**
@@ -120,97 +98,53 @@ export class ApprovalProcessController {
     }
 
     /**
-     * 결재 반려
+     * 결재 반려 / 협의 반려 (통합)
+     * stepSnapshotId에 해당하는 단계가 결재 또는 협의면 반려 처리
      */
     @Post('reject')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
-        summary: '결재 반려, 합의 반려',
+        summary: '결재 반려 / 협의 반려',
         description:
-            '결재, 합의 단계를 반려합니다. 반려 사유는 필수입니다.\n\n' +
+            '결재 단계 또는 협의 단계를 반려합니다. stepSnapshotId로 대상 단계를 지정하면, 결재/협의 모두 반려 처리됩니다. 반려 사유(comment)는 필수입니다.\n\n' +
             '**테스트 시나리오:**\n' +
             '- ✅ 정상: 결재 반려 (사유 포함)\n' +
+            '- ✅ 정상: 협의 반려 (사유 포함)\n' +
             '- ❌ 실패: 반려 사유 누락',
     })
-    @ApiResponse({ status: 200, description: '결재 반려 성공', type: ApprovalActionResponseDto })
-    @ApiResponse({ status: 400, description: '잘못된 요청 (대기 중인 결재만 반려 가능, 반려 사유 누락 등)' })
+    @ApiResponse({ status: 200, description: '반려 성공', type: ApprovalActionResponseDto })
+    @ApiResponse({ status: 400, description: '잘못된 요청 (대기 중인 단계만 가능, 반려 사유 누락 등)' })
     @ApiResponse({ status: 403, description: '권한 없음' })
-    @ApiResponse({ status: 404, description: '결재 단계를 찾을 수 없음' })
+    @ApiResponse({ status: 404, description: '결재/협의 단계를 찾을 수 없음' })
     async rejectStep(@User() user: Employee, @Body() dto: RejectStepDto) {
-        return await this.approvalProcessService.rejectStep(dto, user.id);
+        return await this.approvalProcessService.rejectStepOrRejectAgreement(dto, user.id);
     }
 
     /**
-     * 결재취소 (결재자용)
+     * 결재 취소 (결재자용)
      */
     @Post('cancel')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
-        summary: '상신 취소 (결재자용)',
+        summary: '결재 취소 (결재자용)',
         description:
-            '상신을 취소합니다.\n\n' +
+            '본인이 승인한 결재 단계를 취소합니다.\n\n' +
             '**정책:**\n' +
-            '- 본인이 상신된 문서만 취소 가능\n' +
-            '- 취소 시 문서 상태를 CANCELLED로 변경\n\n' +
+            '- 반려(REJECTED)된 문서는 결재 취소 불가\n' +
+            '- 결재 진행 중 또는 결재 완료 문서만 가능\n' +
+            '- 기안자(1결재자)가 취소 시: 해당 단계 대기 복귀 후 상신 취소(문서 CANCELLED)\n' +
+            '- 일반 결재자 취소 시: 해당 단계만 대기로 되돌림; 문서가 결재 완료였으면 문서를 결재 진행 중으로 되돌림\n\n' +
             '**테스트 시나리오:**\n' +
-            '- ✅ 정상: 상신 취소',
+            '- ✅ 정상: 결재 취소 (일반 결재자)\n' +
+            '- ✅ 정상: 기안자 1결재자 취소 시 상신 취소',
     })
-    @ApiResponse({ status: 200, description: '상신 취소 성공' })
-    @ApiResponse({ status: 400, description: '잘못된 요청 (상신된 문서만 취소 가능)' })
+    @ApiResponse({ status: 200, description: '결재 취소 성공', type: ApprovalActionResponseDto })
+    @ApiResponse({ status: 400, description: '잘못된 요청 (반려 문서 불가, 대기 중인 결재만 취소 가능 등)' })
     @ApiResponse({ status: 403, description: '권한 없음 (본인의 결재 단계만 취소 가능)' })
-    @ApiResponse({ status: 404, description: '문서를 찾을 수 없음' })
+    @ApiResponse({ status: 404, description: '문서/결재 단계를 찾을 수 없음' })
     async cancelApprovalStep(@User() user: Employee, @Body() dto: CancelApprovalStepDto) {
         return await this.approvalProcessService.cancelApprovalStep(dto, user.id);
     }
-
-    /**
-     * @deprecated cancelSubmit과 cancelApprovalStep으로 분리됨
-     */
-    // @Post('cancel')
-    // @HttpCode(HttpStatus.OK)
-    // @ApiOperation({
-    //     summary: '[Deprecated] 결재 취소 (상신취소/결재취소 통합)',
-    //     description:
-    //         '⚠️ 이 API는 더 이상 사용되지 않습니다. 대신 다음 API를 사용하세요:\n' +
-    //         '- 상신취소: POST /approval-process/cancel-submit\n' +
-    //         '- 결재취소: POST /approval-process/cancel-approval-step',
-    //     deprecated: true,
-    // })
-    // @ApiResponse({ status: 200, description: '결재 취소 성공', type: CancelApprovalResponseDto })
-    // @ApiResponse({ status: 400, description: '잘못된 요청' })
-    // @ApiResponse({ status: 403, description: '권한 없음' })
-    // @ApiResponse({ status: 404, description: '문서를 찾을 수 없음' })
-    // async cancelApproval(@User() user: Employee, @Body() dto: CancelApprovalDto) {
-    //     return await this.approvalProcessService.cancelApproval(dto, user.id);
-    // }
-
-    /**
-     * 내 결재 대기 목록 조회 (페이징, 필터링)
-     */
-    // @Get('my-pending')
-    // @ApiOperation({
-    //     summary: '내 결재 대기 목록 조회 (탭별 필터링, 페이징)',
-    //     description:
-    //         '현재 사용자의 결재 대기 목록을 조회합니다. 탭별로 필터링 가능합니다.\n\n' +
-    //         '**조회 타입:**\n' +
-    //         '- **SUBMITTED** (상신): 내가 기안한 문서들 중 결재 대기 중인 문서\n' +
-    //         '- **AGREEMENT** (합의): 내가 합의해야 하는 문서들\n' +
-    //         '- **APPROVAL** (미결): 내가 결재해야 하는 문서들\n\n' +
-    //         '**테스트 시나리오:**\n' +
-    //         '- ✅ 정상: 상신 문서 목록 조회 (type=SUBMITTED)\n' +
-    //         '- ✅ 정상: 합의 대기 목록 조회 (type=AGREEMENT)\n' +
-    //         '- ✅ 정상: 결재 대기 목록 조회 (type=APPROVAL)\n' +
-    //         '- ✅ 정상: 페이징 처리',
-    // })
-    // @ApiResponse({ status: 200, description: '조회 성공', type: PaginatedPendingApprovalsResponseDto })
-    // async getMyPendingApprovals(@User() user: Employee, @Query() query: QueryMyPendingDto) {
-    //     return await this.approvalProcessService.getMyPendingApprovals(
-    //         user.id,
-    //         query.type,
-    //         query.page || 1,
-    //         query.limit || 20,
-    //     );
-    // }
 
     /**
      * 문서의 결재 단계 목록 조회
@@ -245,9 +179,8 @@ export class ApprovalProcessController {
         description:
             '승인, 반려, 협의 완료, 시행 완료, 참조 열람, 취소를 하나의 API로 처리합니다. type 값에 따라 적절한 액션이 수행됩니다.\n\n' +
             '**지원 액션 타입:**\n' +
-            '- approve: 결재 승인\n' +
-            '- reject: 결재 반려\n' +
-            '- complete-agreement: 협의 완료\n' +
+            '- approve: 결재 승인 / 협의 완료 (통합)\n' +
+            '- reject: 결재 반려 / 협의 반려 (통합)\n' +
             '- complete-implementation: 시행 완료\n' +
             '- mark-reference-read: 참조 열람 확인\n' +
             '- cancel: 결재 취소\n\n' +

@@ -6,23 +6,23 @@ import { Type } from 'class-transformer';
  * 문서 필터 타입 Enum (통계와 동일한 구분)
  */
 export enum MyAllDocumentFilterType {
-    /** 임시저장 (내가 기안한 문서 중 DRAFT 상태) */
+    /** 임시저장함 */
     DRAFT = 'DRAFT',
-    /** 수신함 (내가 결재라인에 있는 모든 받은 문서) */
+    /** 수신함 */
     RECEIVED = 'RECEIVED',
-    /** 상신함 (내가 기안한 제출된 전체 문서) */
+    /** 상신함 (나의 상신한 모든 문서) */
     PENDING = 'PENDING',
-    /** 합의함 (내가 협의자로 결재라인에 있는 문서, PENDING 상태) */
-    PENDING_AGREEMENT = 'PENDING_AGREEMENT',
-    /** 결재함 (내가 결재자로 결재라인에 있는 문서, PENDING 상태) */
+    /** 미결함 (지금 내가 결재·협의해야 하는 문서) */
+    PENDING_MINE = 'PENDING_MINE',
+    /** 결재함 (세부) */
     PENDING_APPROVAL = 'PENDING_APPROVAL',
-    /** 시행함 (내가 시행자로 결재라인에 있는 문서, APPROVED 상태 - 결재 완료, 시행 대기) */
+    /** 시행함 */
     IMPLEMENTATION = 'IMPLEMENTATION',
-    /** 기결함 (내가 기안한 문서 중 IMPLEMENTED 상태 - 시행까지 완료) */
+    /** 기결함 */
     APPROVED = 'APPROVED',
-    /** 반려함 (내가 기안한 문서 중 REJECTED 상태) */
+    /** 반려함 */
     REJECTED = 'REJECTED',
-    /** 수신참조함 (내가 참조자로 있는 문서) */
+    /** 수신참조함 */
     RECEIVED_REFERENCE = 'RECEIVED_REFERENCE',
 }
 
@@ -73,18 +73,6 @@ export enum PendingStatusFilter {
 }
 
 /**
- * 합의함 단계 상태 필터 Enum (PENDING_AGREEMENT에만 적용)
- */
-export enum AgreementStepStatus {
-    /** 아직 내 차례가 아닌 상태 (앞에 처리 대기 단계 있음) */
-    SCHEDULED = 'SCHEDULED',
-    /** 내 차례인 상태 (현재 합의 대기) */
-    PENDING = 'PENDING',
-    /** 내 차례가 완료된 상태 (이미 합의 완료) */
-    COMPLETED = 'COMPLETED',
-}
-
-/**
  * 정렬 순서 Enum
  */
 export enum SortOrder {
@@ -101,14 +89,13 @@ export enum SortOrder {
  *
  * ▣ 필터 타입 (filterType) - 통계와 동일한 구분
  * - DRAFT: 임시저장 (내가 기안한 문서)
- * - RECEIVED: 수신함 (내가 합의/결재 라인에 있는 받은 문서, 시행/참조 제외)
+ * - RECEIVED: 수신함 (아직 내 차례가 아닌 문서, 내 앞에 PENDING 단계 있음)
  * - PENDING: 상신함 (내가 기안한 제출된 전체 문서)
- * - PENDING_AGREEMENT: 합의함
- * - PENDING_APPROVAL: 결재함
+ * - PENDING_APPROVAL: 결재함 (세부)
  * - IMPLEMENTATION: 시행함
  * - APPROVED: 기결함
  * - REJECTED: 반려함
- * - RECEIVED_REFERENCE: 수신참조함 (IMPLEMENTED 상태만)
+ * - RECEIVED_REFERENCE: 수신참조함 (문서 상태 무관)
  *
  * ▣ 수신함 단계 타입 필터 (receivedStepType) - RECEIVED에만 적용
  * - AGREEMENT: 합의 단계로 수신한 문서만
@@ -132,14 +119,13 @@ export class QueryMyAllDocumentsDto {
         description:
             '문서 필터 타입 (통계와 동일한 구분)\n' +
             '- DRAFT: 임시저장\n' +
-            '- RECEIVED: 수신함 (내가 합의/결재 라인에 있는 받은 문서, 시행/참조 제외)\n' +
+            '- RECEIVED: 수신함 (아직 내 차례가 아닌 문서만, 내 앞에 PENDING 단계 있음)\n' +
             '- PENDING: 상신함\n' +
-            '- PENDING_AGREEMENT: 합의함\n' +
-            '- PENDING_APPROVAL: 결재함\n' +
+            '- PENDING_APPROVAL: 결재함 (세부)\n' +
             '- IMPLEMENTATION: 시행함\n' +
             '- APPROVED: 기결함\n' +
             '- REJECTED: 반려함\n' +
-            '- RECEIVED_REFERENCE: 수신참조함 (IMPLEMENTED 상태만)',
+            '- RECEIVED_REFERENCE: 수신참조함 (문서 상태 무관)',
         enum: MyAllDocumentFilterType,
         example: MyAllDocumentFilterType.PENDING_APPROVAL,
     })
@@ -198,20 +184,6 @@ export class QueryMyAllDocumentsDto {
     @IsOptional()
     @IsEnum(PendingStatusFilter)
     pendingStatusFilter?: PendingStatusFilter;
-
-    @ApiPropertyOptional({
-        description:
-            '합의함 단계 상태 필터 (PENDING_AGREEMENT에만 적용)\n' +
-            '- SCHEDULED: 아직 내 차례가 아닌 상태\n' +
-            '- PENDING: 내 차례인 상태 (현재 합의 대기)\n' +
-            '- COMPLETED: 내 차례가 완료된 상태 (이미 합의 완료)\n' +
-            '- 미지정: 모든 상태',
-        enum: AgreementStepStatus,
-        example: AgreementStepStatus.PENDING,
-    })
-    @IsOptional()
-    @IsEnum(AgreementStepStatus)
-    agreementStepStatus?: AgreementStepStatus;
 
     @ApiPropertyOptional({
         description: '검색어 (문서 제목 또는 템플릿 이름)',

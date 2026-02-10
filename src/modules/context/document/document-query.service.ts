@@ -33,10 +33,9 @@ export class DocumentQueryService {
     /**
      * 문서 조회 (단건)
      * @param documentId 문서 ID
-     * @param userId 현재 사용자 ID (결재취소 가능 여부 계산용, 선택적)
      * @param queryRunner 쿼리 러너 (선택적)
      */
-    async getDocument(documentId: string, userId?: string, queryRunner?: QueryRunner) {
+    async getDocument(documentId: string, queryRunner?: QueryRunner) {
         const document = await this.documentService.findOne({
             where: { id: documentId },
             relations: [
@@ -70,35 +69,10 @@ export class DocumentQueryService {
         // 기안자의 부서/포지션 정보 추출
         const drafterWithDeptPos = this.extractDrafterDepartmentPosition(document.drafter);
 
-        // 결재취소/상신취소 가능 여부 계산 (userId가 제공된 경우)
-        if (userId) {
-            const canCancelApproval =
-                document.approvalSteps && document.approvalSteps.length > 0
-                    ? this.calculateCanCancelApproval(document.approvalSteps, document.status, userId)
-                    : false;
-
-            const canCancelSubmit = this.calculateCanCancelSubmit(
-                document.approvalSteps || [],
-                document.status,
-                document.drafterId,
-                userId,
-            );
-
-            return {
-                ...document,
-                drafter: drafterWithDeptPos,
-                documentTemplate,
-                canCancelApproval,
-                canCancelSubmit,
-            };
-        }
-
         return {
             ...document,
             drafter: drafterWithDeptPos,
             documentTemplate,
-            canCancelApproval: false,
-            canCancelSubmit: false,
         };
     }
 
@@ -333,7 +307,6 @@ export class DocumentQueryService {
         drafterFilter?: string;
         referenceReadStatus?: string;
         pendingStatusFilter?: string;
-        agreementStepStatus?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;
@@ -362,7 +335,6 @@ export class DocumentQueryService {
             drafterFilter: params.drafterFilter,
             referenceReadStatus: params.referenceReadStatus,
             pendingStatusFilter: params.pendingStatusFilter,
-            agreementStepStatus: params.agreementStepStatus,
         });
 
         // 추가 필터링 조건

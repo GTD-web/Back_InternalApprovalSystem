@@ -104,7 +104,14 @@ export class DocumentPolicyValidator {
             allowedActions: [ReceiverAction.COMPLETE_IMPLEMENTATION],
         },
         [ApprovalStepType.REFERENCE]: {
-            allowedDocumentStatuses: [DocumentStatus.IMPLEMENTED],
+            allowedDocumentStatuses: [
+                DocumentStatus.DRAFT,
+                DocumentStatus.PENDING,
+                DocumentStatus.APPROVED,
+                DocumentStatus.REJECTED,
+                DocumentStatus.CANCELLED,
+                DocumentStatus.IMPLEMENTED,
+            ],
             allowedActions: [ReceiverAction.READ_REFERENCE],
         },
     };
@@ -383,11 +390,8 @@ export class DocumentPolicyValidator {
     /**
      * 결재 진행 순서를 검증합니다.
      *
-     * 정책: 합의 → 결재 → 시행 → 참조
-     * - 합의: 순차 진행, 모두 승인되어야 결재 단계로 이동
-     * - 결재: 순차 진행, 모두 승인되어야 결재완료
-     * - 시행: 결재완료 후 진행
-     * - 참조: 시행완료 후 열람 가능
+     * 정책: 결재선은 하나의 순서 값(stepOrder)으로 이어지며, 협의와 결재가 섞일 수 있음.
+     * 내 단계보다 앞선 순서 값(stepOrder)을 가진 모든 단계(협의·결재 구분 없이)가 승인되어 있어야 함.
      *
      * @param currentStepType 현재 처리하려는 단계 타입
      * @param currentStepOrder 현재 처리하려는 단계 순서
@@ -403,29 +407,13 @@ export class DocumentPolicyValidator {
             status: ApprovalStatus;
         }>,
     ): ValidationResult {
-        // 1. 협의 단계 검증: 현재 단계가 결재인 경우, 모든 협의가 완료되어야 함
-        if (currentStepType === ApprovalStepType.APPROVAL) {
-            const agreementSteps = allSteps.filter((s) => s.stepType === ApprovalStepType.AGREEMENT);
-            const pendingAgreements = agreementSteps.filter((s) => s.status === ApprovalStatus.PENDING);
+        const previousSteps = allSteps.filter((s) => s.stepOrder < currentStepOrder);
+        const pendingPrevious = previousSteps.filter((s) => s.status !== ApprovalStatus.APPROVED);
 
-            if (pendingAgreements.length > 0) {
-                return {
-                    isValid: false,
-                    errorMessage: '모든 협의가 완료되어야 결재를 진행할 수 있습니다.',
-                };
-            }
-        }
-
-        // 2. 이전 결재 단계 검증: 같은 타입의 이전 단계가 완료되어야 함
-        const sameTypeSteps = allSteps.filter((s) => s.stepType === currentStepType && s.stepOrder < currentStepOrder);
-
-        const pendingPreviousSteps = sameTypeSteps.filter((s) => s.status === ApprovalStatus.PENDING);
-
-        if (pendingPreviousSteps.length > 0) {
-            const stepTypeLabel = this.STEP_TYPE_LABELS[currentStepType];
+        if (pendingPrevious.length > 0) {
             return {
                 isValid: false,
-                errorMessage: `이전 ${stepTypeLabel} 단계가 완료되어야 현재 단계를 처리할 수 있습니다.`,
+                errorMessage: '내 순서보다 앞선 모든 단계가 완료되어야 현재 단계를 처리할 수 있습니다.',
             };
         }
 
