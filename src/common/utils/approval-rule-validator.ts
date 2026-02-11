@@ -52,8 +52,11 @@ export class ApprovalRuleValidator {
         switch (rule) {
             case AssigneeRule.FIXED:
                 return { needsEmployee: true };
+            /*
+                HIERARCHY_TO_POSITION 규칙은 직책 정보가 필요했었는데, 우선 필요하지 않은 것으로 처리.
+            */
             case AssigneeRule.HIERARCHY_TO_POSITION:
-                return { needsPosition: true };
+                return { needsPosition: false };
             case AssigneeRule.DEPARTMENT_REFERENCE:
                 return { needsDepartment: true };
             case AssigneeRule.DRAFTER:
