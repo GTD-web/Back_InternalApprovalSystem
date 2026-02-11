@@ -17,7 +17,7 @@
 | `APPROVED`         | 기결함     | 기안자·결재자 | 승인완료·시행완료 + 결재진행중     | 결재/승인, 합의·결재/승인          | 내가 상신한 문서 중 결재완료·시행완료 + 내가 합의·결재에 승인한 문서 |
 | `REJECTED`         | 반려함     | 결재자        | 반려됨                             | 합의·결재 / 승인·반려              | 내가 합의·결재자로 있는 문서 중 반려된 문서 |
 | `IMPLEMENTATION`   | 시행함     | 결재자        | 승인완료                           | 시행 / 대기중                      | 내가 지금 시행해야 하는 문서 |
-| `RECEIVED_REFERENCE` | 수신참조함 | 수신자      | 전체                               | 수신참조 / 미열람·열람             | 내가 수신참조자로 지정된 문서 |
+| `RECEIVED_REFERENCE` | 수신참조함 | 수신자      | REJECTED·CANCELLED 제외            | 수신참조 / 미열람·열람             | 내가 수신참조자로 지정된 문서 |
 
 **참고:** 문서상태 enum: `DRAFT`(임시저장), `PENDING`(결재진행중), `APPROVED`(승인완료), `REJECTED`(반려됨), `CANCELLED`(상신취소), `IMPLEMENTED`(시행완료).  
 결재단계 타입: `AGREEMENT`(합의), `APPROVAL`(결재), `IMPLEMENTATION`(시행), `REFERENCE`(수신참조).  
@@ -214,7 +214,7 @@ WHERE document.status = 'APPROVED'
 ### 2.8 수신참조함 (`RECEIVED_REFERENCE`)
 
 - **노출대상**: 수신자 (참조자)
-- **문서상태**: **전체** (참조는 문서상태와 무관하게 열람 가능하므로, 수신참조함도 문서상태 제한 없음)
+- **문서상태**: **반려(REJECTED)·취소(CANCELLED) 제외** — 수신참조함에는 반려·취소된 문서를 노출하지 않음. 그 외 상태(DRAFT, PENDING, APPROVED, IMPLEMENTED)는 제한 없음.
 - **내 결재단계/상태**: **수신참조(REFERENCE)** / **미열람(PENDING)** 또는 **열람(APPROVED)**  
   → 옵션 `referenceReadStatus`로 “미열람만 / 열람만 / 전체” 제어.
 
@@ -222,6 +222,7 @@ WHERE document.status = 'APPROVED'
 
 ```sql
 WHERE document.drafterId != :userId
+  AND document.status NOT IN ('REJECTED', 'CANCELLED')
   AND document.id IN (
     SELECT ass."documentId"
     FROM approval_step_snapshots ass
@@ -231,9 +232,8 @@ WHERE document.drafterId != :userId
   )
 ```
 
-문서상태 조건은 두지 않음 (전체).  
 **빌더 매핑:** `filterType = 'RECEIVED_REFERENCE'` → `applyReceivedReferenceFilter(qb, userId, options?.referenceReadStatus)`.  
-기존에 `document.status IN (APPROVED, REJECTED, IMPLEMENTED)` 등으로 제한했다면, 요구사항에 맞게 **문서상태 제한 제거**하도록 수정.
+빌더 구현 시 `document.status NOT IN ('REJECTED', 'CANCELLED')` 조건을 반드시 포함하여 반려·취소 문서가 수신참조함에 노출되지 않도록 한다.
 
 ---
 
@@ -250,7 +250,7 @@ WHERE document.drafterId != :userId
 | 5    | `APPROVED`           | 기결함     | 기안자: APPROVED·IMPLEMENTED / 결재자: 합의·결재 승인한 문서 |
 | 6    | `REJECTED`           | 반려함     | 결재자, 합의·결재 참여, 문서 REJECTED |
 | 7    | `IMPLEMENTATION`     | 시행함     | 문서 APPROVED, 시행 단계 PENDING |
-| 8    | `RECEIVED_REFERENCE` | 수신참조함 | 문서상태 전체, REFERENCE 단계, 옵션으로 미열람/열람 |
+| 8    | `RECEIVED_REFERENCE` | 수신참조함 | REJECTED·CANCELLED 제외, REFERENCE 단계, 옵션으로 미열람/열람 |
 
 ---
 
@@ -265,6 +265,6 @@ WHERE document.drafterId != :userId
 | `APPROVED`           | 기결함   | `applyApprovedFilter` — 기안자(APPROVED·IMPLEMENTED) + 결재자(합의·결재 승인 문서). `drafterFilter` 옵션. |
 | `REJECTED`           | 반려함   | `applyRejectedFilter` — 결재자, 합의·결재 참여, 문서 REJECTED. |
 | `IMPLEMENTATION`     | 시행함   | `applyImplementationFilter` — 문서 APPROVED, 시행 단계 PENDING. |
-| `RECEIVED_REFERENCE` | 수신참조함 | `applyReceivedReferenceFilter` — 문서상태 전체, REFERENCE 단계. `referenceReadStatus` 옵션. |
+| `RECEIVED_REFERENCE` | 수신참조함 | `applyReceivedReferenceFilter` — REJECTED·CANCELLED 제외, REFERENCE 단계. `referenceReadStatus` 옵션. |
 
 이 문서의 filterType 순서 및 정의를 기준으로 `document-filter.builder.ts`와 `document-query.service.ts`의 필터 타입 배열을 맞추면, 결재함별 노출 조건과 통계·목록 쿼리가 일치합니다.

@@ -290,15 +290,20 @@ export class DocumentFilterBuilder {
     }
 
     /**
-     * 수신참조함 필터
-     * 내가 참조자(REFERENCE)로 있는 문서, 문서 상태 무관. 옵션으로 미열람/열람 필터.
+     * 수신참조함 필터 (설계: approval-box-query-design.md §2.8)
+     * - 노출대상: 수신자(참조자) → 기안자 본인 문서 제외 (drafterId != userId)
+     * - 문서상태: REJECTED·CANCELLED 제외
+     * - 내 결재단계: REFERENCE, 옵션 referenceReadStatus로 미열람(PENDING)/열람(APPROVED) 제어
      */
     private applyReceivedReferenceFilter(
         qb: SelectQueryBuilder<Document>,
         userId: string,
         referenceReadStatus?: string,
     ): void {
-        // qb.andWhere('document.drafterId != :userId', { userId });
+        qb.andWhere('document.drafterId != :userId', { userId });
+        qb.andWhere('document.status NOT IN (:...excludedDocStatuses)', {
+            excludedDocStatuses: [DocumentStatus.REJECTED, DocumentStatus.CANCELLED],
+        });
 
         if (referenceReadStatus) {
             const statusCondition = referenceReadStatus === 'READ' ? ApprovalStatus.APPROVED : ApprovalStatus.PENDING;
@@ -306,8 +311,8 @@ export class DocumentFilterBuilder {
                 `document.id IN (
                     SELECT ass."documentId"
                     FROM approval_step_snapshots ass
-                    WHERE ass."stepType" = :referenceType
-                    AND ass."approverId" = :userId
+                    WHERE ass."approverId" = :userId
+                    AND ass."stepType" = :referenceType
                     AND ass.status = :referenceStatus
                 )`,
                 {
@@ -321,8 +326,8 @@ export class DocumentFilterBuilder {
                 `document.id IN (
                     SELECT ass."documentId"
                     FROM approval_step_snapshots ass
-                    WHERE ass."stepType" = :referenceType
-                    AND ass."approverId" = :userId
+                    WHERE ass."approverId" = :userId
+                    AND ass."stepType" = :referenceType
                 )`,
                 { userId, referenceType: ApprovalStepType.REFERENCE },
             );

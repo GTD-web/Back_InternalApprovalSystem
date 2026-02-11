@@ -236,15 +236,16 @@ export class DocumentContext {
         document.취소한다(reason);
         await this.documentService.save(document, { queryRunner });
 
-        // 5) 취소 사유를 Comment로 저장
-        await this.commentService.createComment(
-            {
-                documentId: document.id,
-                authorId: dto.drafterId,
-                content: reason,
-            },
-            queryRunner,
-        );
+        // 기안자가 결재 취소 시 코멘트가 중복생성되기 떄문에 주석처리
+        // // 5) 취소 사유를 Comment로 저장
+        // await this.commentService.createComment(
+        //     {
+        //         documentId: document.id,
+        //         authorId: dto.drafterId,
+        //         content: reason,
+        //     },
+        //     queryRunner,
+        // );
 
         this.logger.log(`상신 취소 완료: ${dto.documentId}, 기안자: ${dto.drafterId}`);
         return document;
