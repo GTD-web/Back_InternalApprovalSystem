@@ -14,13 +14,10 @@ import { DomainCommentService } from '../../domain/comment/comment.service';
 import { DomainEmployeeService } from '../../domain/employee/employee.service';
 
 const WEB_PART_DEPARTMENT_NAME = 'Web파트';
-const SEED_EMPLOYEES_REQUIRED = 8;
+const SEED_EMPLOYEES_REQUIRED = 20;
 
 /** 결재선 앞쪽: 합의/결재만 랜덤 배치 (시행·수신참조 제외) */
-const AGREEMENT_APPROVAL_TYPES = [
-    ApprovalStepType.AGREEMENT,
-    ApprovalStepType.APPROVAL,
-] as const;
+const AGREEMENT_APPROVAL_TYPES = [ApprovalStepType.AGREEMENT, ApprovalStepType.APPROVAL] as const;
 
 function shuffle<T>(arr: T[]): T[] {
     const out = [...arr];
@@ -117,11 +114,6 @@ export class SeedService {
             .take(SEED_EMPLOYEES_REQUIRED)
             .getMany();
 
-        if (employees.length < SEED_EMPLOYEES_REQUIRED) {
-            throw new BadRequestException(
-                `시드 생성에는 부서명 '${WEB_PART_DEPARTMENT_NAME}' 소속 직원이 최소 ${SEED_EMPLOYEES_REQUIRED}명 필요합니다. (현재: ${employees.length}명)`,
-            );
-        }
         return employees.map((e) => e.id);
     }
 
@@ -134,9 +126,21 @@ export class SeedService {
         numExtraSteps: number,
         docStatus: DocumentStatus,
     ): Array<{ stepOrder: number; stepType: ApprovalStepType; approverId: string; status: ApprovalStatus }> {
-        const steps: Array<{ stepOrder: number; stepType: ApprovalStepType; approverId: string; status: ApprovalStatus }> = [
-            { stepOrder: 1, stepType: ApprovalStepType.APPROVAL, approverId: drafterId, status: ApprovalStatus.APPROVED },
+        const steps: Array<{
+            stepOrder: number;
+            stepType: ApprovalStepType;
+            approverId: string;
+            status: ApprovalStatus;
+        }> = [
+            {
+                stepOrder: 1,
+                stepType: ApprovalStepType.APPROVAL,
+                approverId: drafterId,
+                status: ApprovalStatus.APPROVED,
+            },
         ];
+
+        if (numExtraSteps === 0) return steps;
 
         // 합의/결재 개수(앞) → 시행 0~1 → 수신참조 나머지 (시행 뒤에만)
         const agreementApprovalCount = Math.max(1, numExtraSteps - 2);
@@ -146,7 +150,8 @@ export class SeedService {
         let order = 2;
 
         const resolveStatus = (stepOrder: number): ApprovalStatus => {
-            if (docStatus === DocumentStatus.APPROVED || docStatus === DocumentStatus.IMPLEMENTED) return ApprovalStatus.APPROVED;
+            if (docStatus === DocumentStatus.APPROVED || docStatus === DocumentStatus.IMPLEMENTED)
+                return ApprovalStatus.APPROVED;
             if (docStatus === DocumentStatus.REJECTED && stepOrder === 2) return ApprovalStatus.REJECTED;
             return ApprovalStatus.PENDING;
         };
@@ -192,10 +197,7 @@ export class SeedService {
     /**
      * 결재자 스냅샷 메타데이터 생성 (부서, 직책, 직급, 이름, 사번)
      */
-    private async buildApproverSnapshot(
-        approverId: string,
-        runner?: QueryRunner,
-    ): Promise<ApproverSnapshotMetadata> {
+    private async buildApproverSnapshot(approverId: string, runner?: QueryRunner): Promise<ApproverSnapshotMetadata> {
         const employee = await this.employeeService.findOne({
             where: { id: approverId },
             relations: [
@@ -238,13 +240,20 @@ export class SeedService {
      * 플로우·결재함 테스트용 시드 데이터 생성
      * Web파트 직원每人이 기안자인 문서를 생성하고, 결재·시행·참조는 동일 직원 풀에서 무작위 배정
      */
-    async runSeed(options?: { templateId?: string }): Promise<{ documents: string[]; message: string; employeeIds: string[] }> {
+    async runSeed(options?: {
+        templateId?: string;
+    }): Promise<{ documents: string[]; message: string; employeeIds: string[] }> {
         const ids = await this.getWebPartEmployeeIds();
         const templateId = options?.templateId;
         const documentIds: string[] = [];
         const runner = this.dataSource.createQueryRunner();
         let docCounter = 0;
-        const docNum = () => `SEED-${new Date().getFullYear()}-${String(++docCounter).padStart(4, '0')}`;
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const docNum = () => {
+            const d = new Date();
+            const timePart = `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+            return `SEED-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${timePart}-${String(++docCounter).padStart(4, '0')}`;
+        };
 
         try {
             await runner.connect();
@@ -271,8 +280,10 @@ export class SeedService {
                 );
                 documentIds.push(draftDoc.id);
 
-                // 직원당 상신 문서 2건: 1단계=기안자 결재·승인, 2단계 이후 무작위
-                const steps1 = this.buildRandomSteps(drafterId, ids, 2 + Math.floor(Math.random() * 2), DocumentStatus.PENDING);
+                // 직원당 상신 문서 3건: 결재단계 최소 1개(기안자) ~ 최대 5개
+                const stepCount = () => Math.floor(Math.random() * 5); // 0~4 → 총 1~5단계
+
+                const steps1 = this.buildRandomSteps(drafterId, ids, stepCount(), DocumentStatus.PENDING);
                 const doc1 = await this.createSubmittedDocumentWithSteps(
                     drafterId,
                     `[시드] 결재진행 (기안자 ${drafterId.slice(0, 8)})`,
@@ -285,7 +296,7 @@ export class SeedService {
                 documentIds.push(doc1.id);
 
                 const secondStatus = randomElement(statusesForVariety);
-                const steps2 = this.buildRandomSteps(drafterId, ids, 2 + Math.floor(Math.random() * 2), secondStatus);
+                const steps2 = this.buildRandomSteps(drafterId, ids, stepCount(), secondStatus);
                 const doc2 = await this.createSubmittedDocumentWithSteps(
                     drafterId,
                     `[시드] ${secondStatus} (기안자 ${drafterId.slice(0, 8)})`,
@@ -296,14 +307,29 @@ export class SeedService {
                     secondStatus,
                 );
                 documentIds.push(doc2.id);
+
+                const thirdStatus = randomElement(statusesForVariety);
+                const steps3 = this.buildRandomSteps(drafterId, ids, stepCount(), thirdStatus);
+                const doc3 = await this.createSubmittedDocumentWithSteps(
+                    drafterId,
+                    `[시드] ${thirdStatus} (기안자 ${drafterId.slice(0, 8)})`,
+                    steps3,
+                    docNum(),
+                    templateId,
+                    runner,
+                    thirdStatus,
+                );
+                documentIds.push(doc3.id);
             }
 
             await runner.commitTransaction();
-            this.logger.log(`Seed completed: ${documentIds.length} documents (Web파트 직원 ${ids.length}명, 직원당 기안 3건)`);
+            this.logger.log(
+                `Seed completed: ${documentIds.length} documents (Web파트 직원 ${ids.length}명, 직원당 기안 4건: 임시저장 1 + 상신 3)`,
+            );
             return {
                 documents: documentIds,
                 employeeIds: ids,
-                message: `Created ${documentIds.length} documents. Each Web파트 employee is drafter of 1 draft + 2 submitted docs; step1=drafter approval (approved), steps 2+=random from pool.`,
+                message: `Created ${documentIds.length} documents. Each Web파트 employee is drafter of 1 draft + 3 submitted docs; approval steps 1~5 per doc (step1=drafter approval).`,
             };
         } catch (e) {
             await runner.rollbackTransaction();
