@@ -893,11 +893,11 @@ export class ApprovalProcessContext {
         }
 
         // 2) 합의 단계가 있는지 확인
-        const hasAgreementStep = allSteps.some((step) => step.stepType === ApprovalStepType.AGREEMENT);
-        if (hasAgreementStep) {
-            this.logger.debug('합의 단계가 있어 기안자 자동 승인을 건너뜁니다.');
-            return; // 합의가 있으면 자동 승인하지 않음
-        }
+        // const hasAgreementStep = allSteps.some((step) => step.stepType === ApprovalStepType.AGREEMENT);
+        // if (hasAgreementStep) {
+        //     this.logger.debug('합의 단계가 있어 기안자 자동 승인을 건너뜁니다.');
+        //     return; // 합의가 있으면 자동 승인하지 않음
+        // }
 
         // 3) 첫 번째 단계 확인
         const firstStep = allSteps[0];
