@@ -3,17 +3,17 @@ import { IsOptional, IsEnum, IsUUID, IsString, IsInt, Min, Max } from 'class-val
 import { Type } from 'class-transformer';
 
 /**
- * 문서 필터 타입 Enum (통계와 동일한 구분)
+ * 문서 필터 타입 Enum (통계·목록 공통, approval-box-query-design.md와 동일)
  */
 export enum MyAllDocumentFilterType {
     /** 임시저장함 */
     DRAFT = 'DRAFT',
     /** 수신함 */
     RECEIVED = 'RECEIVED',
-    /** 상신함 (나의 상신한 모든 문서) */
-    PENDING = 'PENDING',
+    /** 상신함 (나의 상신한 모든 문서, DRAFT 제외) */
+    SUBMITTED = 'SUBMITTED',
     /** 미결함 (지금 내가 결재·협의해야 하는 문서) */
-    PENDING_MINE = 'PENDING_MINE',
+    PENDING = 'PENDING',
     /** 결재함 (세부) */
     PENDING_APPROVAL = 'PENDING_APPROVAL',
     /** 시행함 */
@@ -27,7 +27,7 @@ export enum MyAllDocumentFilterType {
 }
 
 /**
- * 수신함 단계 타입 필터 Enum (RECEIVED에만 적용)
+ * 수신함 단계 타입 필터 Enum (RECEIVED에만 적용, 현재 미사용)
  */
 export enum ReceivedStepType {
     /** 합의 단계 */
@@ -57,7 +57,7 @@ export enum ReferenceReadStatus {
 }
 
 /**
- * 상신함 문서 상태 필터 Enum (PENDING에만 적용)
+ * 상신함 문서 상태 필터 Enum (SUBMITTED에만 적용)
  */
 export enum PendingStatusFilter {
     /** 결재 진행중 */
@@ -87,17 +87,18 @@ export enum SortOrder {
  *
  * === 필터링 조건 가이드 ===
  *
- * ▣ 필터 타입 (filterType) - 통계와 동일한 구분
- * - DRAFT: 임시저장 (내가 기안한 문서)
- * - RECEIVED: 수신함 (아직 내 차례가 아닌 문서, 내 앞에 PENDING 단계 있음)
- * - PENDING: 상신함 (내가 기안한 제출된 전체 문서)
+ * ▣ 필터 타입 (filterType) - 통계와 동일한 구분 (approval-box-query-design.md)
+ * - DRAFT: 임시저장함
+ * - RECEIVED: 수신함 (현재 미사용 — 주석 처리)
+ * - SUBMITTED: 상신함 (나의 상신한 모든 문서, DRAFT 제외)
+ * - PENDING: 미결함 (지금 내가 결재·협의해야 하는 문서)
  * - PENDING_APPROVAL: 결재함 (세부)
  * - IMPLEMENTATION: 시행함
  * - APPROVED: 기결함
  * - REJECTED: 반려함
- * - RECEIVED_REFERENCE: 수신참조함 (문서 상태 무관)
+ * - RECEIVED_REFERENCE: 수신참조함
  *
- * ▣ 수신함 단계 타입 필터 (receivedStepType) - RECEIVED에만 적용
+ * ▣ 수신함 단계 타입 필터 (receivedStepType) - RECEIVED에만 적용 (현재 미사용)
  * - AGREEMENT: 합의 단계로 수신한 문서만
  * - APPROVAL: 결재 단계로 수신한 문서만
  *
@@ -117,33 +118,34 @@ export enum SortOrder {
 export class QueryMyAllDocumentsDto {
     @ApiPropertyOptional({
         description:
-            '문서 필터 타입 (통계와 동일한 구분)\n' +
-            '- DRAFT: 임시저장\n' +
-            '- RECEIVED: 수신함 (아직 내 차례가 아닌 문서만, 내 앞에 PENDING 단계 있음)\n' +
-            '- PENDING: 상신함\n' +
-            '- PENDING_APPROVAL: 결재함 (세부)\n' +
+            '문서 필터 타입 (통계와 동일)\n' +
+            '- DRAFT: 임시저장함\n' +
+            // '- RECEIVED: 수신함 (현재 미사용)\n' +
+            '- SUBMITTED: 상신함\n' +
+            '- PENDING: 미결함\n' +
+            '- PENDING_APPROVAL: 결재함(세부)\n' +
             '- IMPLEMENTATION: 시행함\n' +
             '- APPROVED: 기결함\n' +
             '- REJECTED: 반려함\n' +
-            '- RECEIVED_REFERENCE: 수신참조함 (문서 상태 무관)',
+            '- RECEIVED_REFERENCE: 수신참조함',
         enum: MyAllDocumentFilterType,
-        example: MyAllDocumentFilterType.PENDING_APPROVAL,
+        example: MyAllDocumentFilterType.PENDING,
     })
     @IsOptional()
     @IsEnum(MyAllDocumentFilterType)
     filterType?: MyAllDocumentFilterType;
 
-    @ApiPropertyOptional({
-        description:
-            '수신함 단계 타입 필터 (RECEIVED에만 적용)\n' +
-            '- AGREEMENT: 합의 단계로 수신한 문서만\n' +
-            '- APPROVAL: 결재 단계로 수신한 문서만',
-        enum: ReceivedStepType,
-        example: ReceivedStepType.APPROVAL,
-    })
-    @IsOptional()
-    @IsEnum(ReceivedStepType)
-    receivedStepType?: ReceivedStepType;
+    // @ApiPropertyOptional({
+    //     description:
+    //         '수신함 단계 타입 필터 (RECEIVED에만 적용)\n' +
+    //         '- AGREEMENT: 합의 단계로 수신한 문서만\n' +
+    //         '- APPROVAL: 결재 단계로 수신한 문서만',
+    //     enum: ReceivedStepType,
+    //     example: ReceivedStepType.APPROVAL,
+    // })
+    // @IsOptional()
+    // @IsEnum(ReceivedStepType)
+    // receivedStepType?: ReceivedStepType;
 
     @ApiPropertyOptional({
         description:

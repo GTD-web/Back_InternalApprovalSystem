@@ -664,16 +664,16 @@ export class DocumentQueryService {
     async getMyAllDocumentsStatistics(userId: string) {
         this.logger.debug(`내 전체 문서 통계 조회: 사용자 ${userId}`);
 
+        // document-filter.builder.ts applyFilter switch 기준
         const filterTypes = [
-            'DRAFT',
-            'RECEIVED',
-            'PENDING',
-            'PENDING_AGREEMENT',
-            'PENDING_APPROVAL',
-            'IMPLEMENTATION',
-            'APPROVED',
-            'REJECTED',
-            'RECEIVED_REFERENCE',
+            'DRAFT', // 임시저장함
+            // 'RECEIVED', // 수신함
+            'SUBMITTED', // 상신함
+            'PENDING', // 미결함
+            'APPROVED', // 기결함
+            'REJECTED', // 반려함
+            'IMPLEMENTATION', // 시행함
+            'RECEIVED_REFERENCE', // 수신참조함
         ];
 
         const statistics: Record<string, number> = {};

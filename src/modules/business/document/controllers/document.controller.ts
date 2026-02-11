@@ -60,21 +60,21 @@ export class DocumentController {
             '**응답 형식:**\n' +
             '```json\n' +
             '{\n' +
-            '  "DRAFT": 1,                  // 임시저장함 (나의 상신 전 문서, DRAFT)\n' +
-            '  "RECEIVED": 15,              // 수신함 (아직 내 차례가 아닌 문서, 내 앞에 PENDING 단계 있음)\n' +
-            '  "PENDING": 10,               // 상신함 (나의 상신한 모든 문서, DRAFT 제외)\n' +
-            '  "PENDING_MINE": 3,           // 미결함 (지금 내가 결재·협의해야 하는 문서)\n' +
-            '  "IMPLEMENTATION": 1,         // 시행함 (지금 내가 시행해야 하는 문서)\n' +
-            '  "APPROVED": 20,              // 기결함 (기안한 문서 중 결재·시행 완료 + 내가 승인한 문서)\n' +
-            '  "REJECTED": 3,               // 반려함 (내가 합의·결재자로 있는 문서 중 반려된 문서)\n' +
-            '  "RECEIVED_REFERENCE": 23    // 수신참조함 (내가 수신참조자로 지정된 문서, 문서상태 무관)\n' +
+            '  "DRAFT": 1,                  // 임시저장함\n' +
+            // '  "RECEIVED": 15,              // 수신함 (현재 미사용)\n' +
+            '  "SUBMITTED": 10,             // 상신함 (나의 상신한 모든 문서, DRAFT 제외)\n' +
+            '  "PENDING": 3,                // 미결함 (지금 내가 결재·협의해야 하는 문서)\n' +
+            '  "APPROVED": 20,              // 기결함\n' +
+            '  "REJECTED": 3,               // 반려함\n' +
+            '  "IMPLEMENTATION": 1,         // 시행함\n' +
+            '  "RECEIVED_REFERENCE": 23    // 수신참조함\n' +
             '}\n' +
             '```\n\n' +
             '**필터별 상세 설명:**\n' +
             '- DRAFT: 임시저장함 — 내가 임시 저장한 문서 (문서 상태: DRAFT)\n' +
-            '- RECEIVED: 수신함 — 아직 내 차례가 아닌 문서만 (내 앞에 PENDING 단계가 있는 문서, 결재진행중)\n' +
-            '- PENDING: 상신함 — 내가 상신한 모든 문서 (DRAFT 제외, 전체 상태)\n' +
-            '- PENDING_MINE: 미결함 — 결재 진행 중이며, 내가 합의·결재 단계에서 대기 중이고 앞선 단계가 모두 승인된 문서\n' +
+            // '- RECEIVED: 수신함 — 아직 내 차례가 아닌 문서만 (내 앞에 PENDING 단계가 있는 문서, 결재진행중)\n' +
+            '- SUBMITTED: 상신함 — 내가 상신한 모든 문서 (DRAFT 제외, 전체 상태)\n' +
+            '- PENDING: 미결함 — 결재 진행 중이며, 내가 합의·결재 단계에서 대기 중이고 앞선 단계가 모두 승인된 문서\n' +
             '- IMPLEMENTATION: 시행함 — 문서 승인완료(APPROVED)이며, 내 시행 단계가 대기 중인 문서\n' +
             '- APPROVED: 기결함 — 내가 기안한 문서 중 승인완료·시행완료 + 내가 합의·결재에 승인한 문서(결재진행중/승인완료/시행완료)\n' +
             '- REJECTED: 반려함 — 내가 합의·결재자로 참여한 문서 중 반려(REJECTED)된 문서\n' +
@@ -103,20 +103,17 @@ export class DocumentController {
             '통계 조회와 동일한 필터로 결재함별 문서 목록을 조회합니다.\n\n' +
             '**필터 타입 (filterType):**\n' +
             '- DRAFT: 임시저장함 — 내가 임시 저장한 문서 (DRAFT)\n' +
-            '- RECEIVED: 수신함 — 아직 내 차례가 아닌 문서만 (내 앞에 PENDING 단계가 있는 문서)\n' +
-            '- PENDING: 상신함 — 내가 상신한 모든 문서 (DRAFT 제외)\n' +
-            '- PENDING_MINE: 미결함 — 지금 내가 결재·협의해야 하는 문서 (합의·결재 대기, 앞선 단계 모두 승인)\n' +
-            '- PENDING_APPROVAL: 결재함 (세부) — 내가 결재해야 하는 문서만\n' +
+            // '- RECEIVED: 수신함 — 아직 내 차례가 아닌 문서만 (내 앞에 PENDING 단계가 있는 문서)\n' +
+            '- SUBMITTED: 상신함 — 내가 상신한 모든 문서 (DRAFT 제외)\n' +
+            '- PENDING: 미결함 — 지금 내가 결재·협의해야 하는 문서 (합의·결재 대기, 앞선 단계 모두 승인)\n' +
             '- IMPLEMENTATION: 시행함 — 문서 승인완료이며 내 시행 단계가 대기 중인 문서\n' +
             '- APPROVED: 기결함 — 내가 기안한 문서 중 승인·시행 완료 + 내가 합의·결재에 승인한 문서 (drafterFilter 옵션 사용)\n' +
             '- REJECTED: 반려함 — 내가 합의·결재자로 있는 문서 중 반려된 문서\n' +
             '- RECEIVED_REFERENCE: 수신참조함 — 내가 수신참조자로 지정된 문서 (문서 상태 무관)\n' +
             '- 미지정: 내가 기안한 문서 + 내가 참여하는 문서 전체\n\n' +
-            '**상신함 문서 상태 필터 (pendingStatusFilter) - PENDING에만 적용:**\n' +
+            '**상신함 문서 상태 필터 (pendingStatusFilter) - SUBMITTED에만 적용:**\n' +
             '- PENDING, APPROVED, REJECTED, CANCELLED, IMPLEMENTED: 해당 상태만\n' +
             '- 미지정: DRAFT 제외 전체\n\n' +
-            '**수신함 단계 타입 필터 (receivedStepType) - RECEIVED에만 적용:**\n' +
-            '- AGREEMENT, APPROVAL, 미지정\n\n' +
             '**기안자 필터 (drafterFilter) - APPROVED에만 적용:**\n' +
             '- MY_DRAFT: 내가 기안한 문서만 (승인·시행 완료)\n' +
             '- PARTICIPATED: 내가 참여(합의·결재 승인)한 문서만\n' +
@@ -138,7 +135,7 @@ export class DocumentController {
         return await this.documentService.getMyAllDocuments({
             userId: user.id,
             filterType: query.filterType,
-            receivedStepType: query.receivedStepType,
+            // receivedStepType: query.receivedStepType,
             drafterFilter: query.drafterFilter,
             referenceReadStatus: query.referenceReadStatus,
             pendingStatusFilter: query.pendingStatusFilter,

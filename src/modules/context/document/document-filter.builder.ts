@@ -32,20 +32,22 @@ export class DocumentFilterBuilder {
                 this.applyDraftFilter(qb, userId);
                 break;
 
-            case 'PENDING':
+            case 'SUBMITTED':
+                // 상신함: 기안자, DRAFT 제외 전체
                 this.applyPendingFilter(qb, userId, options?.pendingStatusFilter);
                 break;
 
             case 'RECEIVED':
-                this.applyReceivedFilter(qb, userId, options?.receivedStepType);
+                this.applyReceivedFilter(qb, userId);
+                break;
+
+            case 'PENDING':
+                // 미결함: 합의·결재 대기 + 앞선 단계 완료
+                this.applyPendingMineFilter(qb, userId);
                 break;
 
             case 'PENDING_APPROVAL':
                 this.applyPendingApprovalFilter(qb, userId);
-                break;
-
-            case 'PENDING_MINE':
-                this.applyPendingMineFilter(qb, userId);
                 break;
 
             case 'IMPLEMENTATION':
@@ -111,44 +113,11 @@ export class DocumentFilterBuilder {
     }
 
     /**
-     * 수신함 필터
-     * 아직 내 차례가 아닌 문서만: 내가 수신처로 지정된 문서 중, 내 앞에 PENDING 단계가 있는 문서 (결재진행중)
-     * 합의(AGREEMENT)·결재(APPROVAL) 단계만 포함. receivedStepType으로 단계 타입 제한 가능.
+     * 수신함 필터 (수신처로 지정된 문서)
+     * 현재 미사용 — 추후 구현 시 receivedStepType으로 단계 타입 제한 가능.
      */
-    private applyReceivedFilter(qb: SelectQueryBuilder<Document>, userId: string, receivedStepType?: string): void {
-        const receivedStepTypes =
-            receivedStepType === ApprovalStepType.AGREEMENT
-                ? [ApprovalStepType.AGREEMENT]
-                : receivedStepType === ApprovalStepType.APPROVAL
-                  ? [ApprovalStepType.APPROVAL]
-                  : [ApprovalStepType.AGREEMENT, ApprovalStepType.APPROVAL];
-
-        qb.andWhere('document.drafterId != :userId', { userId })
-            .andWhere('document.status = :pendingStatus', { pendingStatus: DocumentStatus.PENDING })
-            .andWhere(
-                `document.id IN (
-                    SELECT DISTINCT my_step."documentId"
-                    FROM approval_step_snapshots my_step
-                    INNER JOIN documents d ON my_step."documentId" = d.id
-                    WHERE d."drafterId" != :userId
-                    AND my_step."approverId" = :userId
-                    AND my_step."stepType" IN (:...receivedStepTypes)
-                    AND my_step.status = :myPendingStatus
-                    AND EXISTS (
-                        SELECT 1
-                        FROM approval_step_snapshots prior_step
-                        WHERE prior_step."documentId" = my_step."documentId"
-                        AND prior_step."stepOrder" < my_step."stepOrder"
-                        AND prior_step.status = :priorPendingStatus
-                    )
-                )`,
-                {
-                    receivedStepTypes,
-                    pendingStatus: DocumentStatus.PENDING,
-                    myPendingStatus: ApprovalStatus.PENDING,
-                    priorPendingStatus: ApprovalStatus.PENDING,
-                },
-            );
+    private applyReceivedFilter(_qb: SelectQueryBuilder<Document>, _userId: string, _receivedStepType?: string): void {
+        // TODO: 수신함 조건 적용
     }
 
     /**
@@ -256,7 +225,11 @@ export class DocumentFilterBuilder {
         if (drafterFilter === 'PARTICIPATED') {
             qb.andWhere('document.drafterId != :userId', { userId })
                 .andWhere('document.status IN (:...participatedDocStatuses)', {
-                    participatedDocStatuses: [DocumentStatus.PENDING, DocumentStatus.APPROVED, DocumentStatus.IMPLEMENTED],
+                    participatedDocStatuses: [
+                        DocumentStatus.PENDING,
+                        DocumentStatus.APPROVED,
+                        DocumentStatus.IMPLEMENTED,
+                    ],
                 })
                 .andWhere(
                     `document.id IN (
@@ -325,7 +298,7 @@ export class DocumentFilterBuilder {
         userId: string,
         referenceReadStatus?: string,
     ): void {
-        qb.andWhere('document.drafterId != :userId', { userId });
+        // qb.andWhere('document.drafterId != :userId', { userId });
 
         if (referenceReadStatus) {
             const statusCondition = referenceReadStatus === 'READ' ? ApprovalStatus.APPROVED : ApprovalStatus.PENDING;
@@ -338,6 +311,7 @@ export class DocumentFilterBuilder {
                     AND ass.status = :referenceStatus
                 )`,
                 {
+                    userId,
                     referenceType: ApprovalStepType.REFERENCE,
                     referenceStatus: statusCondition,
                 },
@@ -350,7 +324,7 @@ export class DocumentFilterBuilder {
                     WHERE ass."stepType" = :referenceType
                     AND ass."approverId" = :userId
                 )`,
-                { referenceType: ApprovalStepType.REFERENCE },
+                { userId, referenceType: ApprovalStepType.REFERENCE },
             );
         }
     }
