@@ -68,7 +68,11 @@ export class DocumentPolicyValidator {
             DrafterAction.DELETE,
             DrafterAction.SUBMIT,
         ],
-        [DocumentStatus.PENDING]: [DrafterAction.UPDATE_CONTENT, DrafterAction.CANCEL_SUBMIT],
+        [DocumentStatus.PENDING]: [
+            DrafterAction.UPDATE_CONTENT,
+            DrafterAction.UPDATE_APPROVAL_LINE,
+            DrafterAction.CANCEL_SUBMIT,
+        ],
         [DocumentStatus.APPROVED]: [],
         [DocumentStatus.REJECTED]: [],
         [DocumentStatus.IMPLEMENTED]: [],
