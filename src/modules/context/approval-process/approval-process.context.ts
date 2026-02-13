@@ -601,10 +601,10 @@ export class ApprovalProcessContext {
             throw new ForbiddenException('본인의 결재 단계만 취소할 수 있습니다.');
         }
 
-        // 5) 결재(APPROVAL) 단계만 취소 대상
-        if (step.stepType !== ApprovalStepType.APPROVAL) {
-            throw new BadRequestException('결재 단계만 취소할 수 있습니다.');
-        }
+        // // 5) 결재(APPROVAL) 단계만 취소 대상
+        // if (step.stepType !== ApprovalStepType.APPROVAL) {
+        //     throw new BadRequestException('결재 단계만 취소할 수 있습니다.');
+        // }
 
         // 6) 승인 상태인지 확인
         if (step.status !== ApprovalStatus.APPROVED) {
