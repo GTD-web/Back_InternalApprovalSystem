@@ -929,7 +929,7 @@ export class ApprovalProcessContext {
             const nextApprovalStep = allSteps.find(
                 (step) =>
                     step.stepOrder > firstStep.stepOrder &&
-                    step.stepType === ApprovalStepType.APPROVAL &&
+                    (step.stepType === ApprovalStepType.APPROVAL || step.stepType === ApprovalStepType.AGREEMENT) &&
                     step.status === ApprovalStatus.PENDING,
             );
 
