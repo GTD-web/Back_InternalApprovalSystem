@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { DataSource, QueryRunner } from 'typeorm';
+import { DataSource, QueryRunner, In } from 'typeorm';
 import { DomainApprovalStepSnapshotService } from '../../domain/approval-step-snapshot/approval-step-snapshot.service';
 import { DomainDocumentService } from '../../domain/document/document.service';
 import { DomainCommentService } from '../../domain/comment/comment.service';
@@ -786,6 +786,118 @@ export class ApprovalProcessContext {
                 hasPreviousPage: page > 1,
             },
         };
+    }
+
+    /**
+     * 문서 목록을 결재 단계·현재 차례 정보로 보강 (연월별 내 결재 차례 API용)
+     * @param documents 이미 "내 차례"로 필터된 문서 목록 (drafter 로드됨)
+     * @param userId 현재 사용자 ID
+     * @returns getMyPendingApprovals와 동일한 항목 형태 배열
+     */
+    async enrichDocumentsWithPendingApprovalInfo(
+        documents: Document[],
+        userId: string,
+        queryRunner?: QueryRunner,
+    ): Promise<
+        Array<{
+            documentId: string;
+            documentNumber?: string;
+            title: string;
+            status: DocumentStatus;
+            drafterId: string;
+            drafterName: string;
+            drafterDepartmentName?: string;
+            currentStep?: {
+                id: string;
+                stepOrder: number;
+                stepType: ApprovalStepType;
+                status: ApprovalStatus;
+                approverId: string;
+                approverSnapshot?: unknown;
+            };
+            approvalSteps: Array<{
+                id: string;
+                stepOrder: number;
+                stepType: ApprovalStepType;
+                status: ApprovalStatus;
+                approverId: string;
+                approverName: string;
+                comment?: string;
+                approvedAt?: Date;
+            }>;
+            /** 직전 단계의 승인일 = 내 결재 차례가 시작된 시점 (달력 표시용) */
+            previousStepApprovedAt?: Date;
+            submittedAt?: Date;
+            createdAt: Date;
+        }>
+    > {
+        if (documents.length === 0) return [];
+
+        const docIds = documents.map((d) => d.id);
+        const allStepsList = await this.approvalStepSnapshotService.findAll({
+            where: { documentId: In(docIds) },
+            relations: ['approver'],
+            order: { stepOrder: 'ASC' },
+            queryRunner,
+        });
+
+        const stepsByDocId = new Map<string, ApprovalStepSnapshot[]>();
+        for (const step of allStepsList) {
+            const list = stepsByDocId.get(step.documentId) || [];
+            list.push(step);
+            stepsByDocId.set(step.documentId, list);
+        }
+
+        return documents.map((doc) => {
+            const steps = stepsByDocId.get(doc.id) || [];
+            const myPendingStep = steps.find(
+                (s) =>
+                    s.approverId === userId &&
+                    s.status === ApprovalStatus.PENDING &&
+                    [ApprovalStepType.AGREEMENT, ApprovalStepType.APPROVAL].includes(s.stepType) &&
+                    steps.filter((p) => p.stepOrder < s.stepOrder).every((p) => p.status === ApprovalStatus.APPROVED),
+            );
+            const approvalSteps = steps.map((s) => ({
+                id: s.id,
+                stepOrder: s.stepOrder,
+                stepType: s.stepType,
+                status: s.status,
+                approverId: s.approverId,
+                approverName: (s.approverSnapshot as { employeeName?: string })?.employeeName || s.approver?.name || '',
+                comment: s.comment ?? undefined,
+                approvedAt: s.approvedAt ?? undefined,
+            }));
+            const currentStepInfo = myPendingStep
+                ? {
+                      id: myPendingStep.id,
+                      stepOrder: myPendingStep.stepOrder,
+                      stepType: myPendingStep.stepType,
+                      status: myPendingStep.status,
+                      approverId: myPendingStep.approverId,
+                      approverSnapshot: myPendingStep.approverSnapshot,
+                  }
+                : undefined;
+
+            const prevStep = myPendingStep
+                ? steps.find((s) => s.stepOrder === myPendingStep.stepOrder - 1)
+                : undefined;
+            const previousStepApprovedAt = prevStep?.approvedAt ?? undefined;
+
+            return {
+                documentId: doc.id,
+                documentNumber: doc.documentNumber ?? undefined,
+                title: doc.title,
+                status: doc.status,
+                drafterId: doc.drafterId,
+                drafterName: doc.drafter?.name || '',
+                drafterDepartmentName: undefined,
+                currentStep: currentStepInfo,
+                approvalSteps,
+                previousStepApprovedAt,
+                submittedAt: doc.submittedAt,
+                createdAt: doc.createdAt,
+            };
+        });
     }
 
     /**
