@@ -175,6 +175,12 @@ export class Document {
         this.cancelledAt = new Date();
     }
 
+    /** 결재 완료 상태에서 한 결재자가 취소했을 때 문서를 다시 결재 진행 중으로 되돌린다 */
+    결재진행중으로되돌린다(): void {
+        this.status = DocumentStatus.PENDING;
+        this.approvedAt = undefined;
+    }
+
     시행완료한다(): void {
         this.status = DocumentStatus.IMPLEMENTED;
     }

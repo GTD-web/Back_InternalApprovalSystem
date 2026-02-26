@@ -1,2 +1,0 @@
-import * as entities from './index';
-export declare const EntityList: (typeof entities.Rank | typeof entities.Department | typeof entities.Position | typeof entities.EmployeeDepartmentPosition | typeof entities.Employee | typeof entities.File | typeof entities.Document | typeof entities.ApprovalStep | typeof entities.DocumentType | typeof entities.DocumentForm | typeof entities.FormApprovalLine | typeof entities.FormApprovalStep)[];

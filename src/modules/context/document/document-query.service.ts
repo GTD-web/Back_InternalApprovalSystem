@@ -33,10 +33,9 @@ export class DocumentQueryService {
     /**
      * 문서 조회 (단건)
      * @param documentId 문서 ID
-     * @param userId 현재 사용자 ID (결재취소 가능 여부 계산용, 선택적)
      * @param queryRunner 쿼리 러너 (선택적)
      */
-    async getDocument(documentId: string, userId?: string, queryRunner?: QueryRunner) {
+    async getDocument(documentId: string, queryRunner?: QueryRunner) {
         const document = await this.documentService.findOne({
             where: { id: documentId },
             relations: [
@@ -70,35 +69,10 @@ export class DocumentQueryService {
         // 기안자의 부서/포지션 정보 추출
         const drafterWithDeptPos = this.extractDrafterDepartmentPosition(document.drafter);
 
-        // 결재취소/상신취소 가능 여부 계산 (userId가 제공된 경우)
-        if (userId) {
-            const canCancelApproval =
-                document.approvalSteps && document.approvalSteps.length > 0
-                    ? this.calculateCanCancelApproval(document.approvalSteps, document.status, userId)
-                    : false;
-
-            const canCancelSubmit = this.calculateCanCancelSubmit(
-                document.approvalSteps || [],
-                document.status,
-                document.drafterId,
-                userId,
-            );
-
-            return {
-                ...document,
-                drafter: drafterWithDeptPos,
-                documentTemplate,
-                canCancelApproval,
-                canCancelSubmit,
-            };
-        }
-
         return {
             ...document,
             drafter: drafterWithDeptPos,
             documentTemplate,
-            canCancelApproval: false,
-            canCancelSubmit: false,
         };
     }
 
@@ -333,7 +307,6 @@ export class DocumentQueryService {
         drafterFilter?: string;
         referenceReadStatus?: string;
         pendingStatusFilter?: string;
-        agreementStepStatus?: string;
         searchKeyword?: string;
         startDate?: Date;
         endDate?: Date;
@@ -362,10 +335,9 @@ export class DocumentQueryService {
             drafterFilter: params.drafterFilter,
             referenceReadStatus: params.referenceReadStatus,
             pendingStatusFilter: params.pendingStatusFilter,
-            agreementStepStatus: params.agreementStepStatus,
         });
 
-        // 추가 필터링 조건
+        // 추가 필터링 조건 (연월 등)
         if (params.searchKeyword) {
             // 문서 제목 또는 템플릿 이름으로 검색
             baseQb.leftJoin('document_templates', 'template', 'document.documentTemplateId = template.id');
@@ -487,6 +459,49 @@ export class DocumentQueryService {
                 hasPreviousPage: page > 1,
             },
         };
+    }
+
+    /**
+     * 해당 연월에 직전 결재자가 승인한 시점(approvedAt)이 포함되고, 현재 내 결재 차례가 돌아온 문서 목록 조회
+     * (미결함 조건 + 직전 결재자의 결재일 연월 필터)
+     */
+    async getMyTurnDocumentsByYearMonth(userId: string, year: number, month: number): Promise<Document[]> {
+        const qb = this.documentService
+            .createQueryBuilder('document')
+            .leftJoinAndSelect('document.drafter', 'drafter')
+            .where('1=1');
+
+        this.filterBuilder.applyFilter(qb, 'PENDING', userId);
+
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 1);
+        // 직전 결재자(stepOrder - 1)의 approvedAt이 해당 연월인 문서만
+        qb.andWhere(
+            `document.id IN (
+                SELECT my_step."documentId"
+                FROM approval_step_snapshots my_step
+                INNER JOIN approval_step_snapshots prev_step
+                    ON prev_step."documentId" = my_step."documentId"
+                    AND prev_step."stepOrder" = my_step."stepOrder" - 1
+                WHERE my_step."approverId" = :userId
+                AND my_step."stepType" IN (:...agreementApprovalTypes)
+                AND my_step.status = :myPendingStatus
+                AND prev_step.status = :approvedStepStatus
+                AND prev_step."approvedAt" >= :start
+                AND prev_step."approvedAt" < :end
+            )`,
+            {
+                userId,
+                agreementApprovalTypes: [ApprovalStepType.AGREEMENT, ApprovalStepType.APPROVAL],
+                myPendingStatus: ApprovalStatus.PENDING,
+                approvedStepStatus: ApprovalStatus.APPROVED,
+                start,
+                end,
+            },
+        );
+        qb.orderBy('document.submittedAt', 'DESC');
+
+        return qb.getMany();
     }
 
     /**
@@ -692,16 +707,16 @@ export class DocumentQueryService {
     async getMyAllDocumentsStatistics(userId: string) {
         this.logger.debug(`내 전체 문서 통계 조회: 사용자 ${userId}`);
 
+        // document-filter.builder.ts applyFilter switch 기준
         const filterTypes = [
-            'DRAFT',
-            'RECEIVED',
-            'PENDING',
-            'PENDING_AGREEMENT',
-            'PENDING_APPROVAL',
-            'IMPLEMENTATION',
-            'APPROVED',
-            'REJECTED',
-            'RECEIVED_REFERENCE',
+            'DRAFT', // 임시저장함
+            // 'RECEIVED', // 수신함
+            'SUBMITTED', // 상신함
+            'PENDING', // 미결함
+            'APPROVED', // 기결함
+            'REJECTED', // 반려함
+            'IMPLEMENTATION', // 시행함
+            'RECEIVED_REFERENCE', // 수신참조함
         ];
 
         const statistics: Record<string, number> = {};

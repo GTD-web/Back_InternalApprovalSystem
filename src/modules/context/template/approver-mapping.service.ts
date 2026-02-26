@@ -131,6 +131,7 @@ export class ApproverMappingService {
                         drafterDepartment,
                         drafterPosition,
                     );
+                    console.log('superiorResult', superiorResult);
                     if (superiorResult) {
                         addStepIfNotDuplicate({
                             stepType: step.stepType,
@@ -153,6 +154,7 @@ export class ApproverMappingService {
                         drafterPosition,
                         step.targetPositionId,
                     );
+                    console.log('hierarchyApprovers', hierarchyApprovers);
                     for (const approver of hierarchyApprovers) {
                         addStepIfNotDuplicate({
                             stepType: step.stepType,

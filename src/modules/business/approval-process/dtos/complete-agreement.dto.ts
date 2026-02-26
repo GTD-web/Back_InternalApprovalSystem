@@ -6,18 +6,11 @@ import { IsUUID, IsString, IsOptional } from 'class-validator';
  */
 export class CompleteAgreementDto {
     @ApiProperty({
-        description: '협의 단계 스냅샷 ID',
+        description: '문서 ID',
         example: 'uuid',
     })
     @IsUUID()
-    stepSnapshotId: string;
-
-    // @ApiProperty({
-    //     description: '협의자 ID',
-    //     example: 'uuid',
-    // })
-    // @IsUUID()
-    // agreerId: string;
+    documentId: string;
 
     @ApiPropertyOptional({
         description: '협의 의견',

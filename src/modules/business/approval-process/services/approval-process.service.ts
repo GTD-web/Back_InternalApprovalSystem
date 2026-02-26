@@ -5,15 +5,13 @@ import { DocumentContext } from '../../../context/document/document.context';
 import { DocumentQueryService } from '../../../context/document/document-query.service';
 import { DocumentNotificationService } from '../../../context/notification/document-notification.service';
 import { withTransaction } from 'src/common/utils/transaction.util';
+import { ApprovalStepType } from '../../../../common/enums/approval.enum';
 import {
     ApproveStepDto,
     RejectStepDto,
-    CompleteAgreementDto,
     CompleteImplementationDto,
-    CancelApprovalDto,
     CancelApprovalStepDto,
     ProcessApprovalActionDto,
-    ApprovalActionType,
 } from '../dtos';
 
 /**
@@ -33,74 +31,49 @@ export class ApprovalProcessService {
     ) {}
 
     /**
-     * 결재 승인
+     * 결재 승인 또는 협의 완료 (통합)
+     * stepSnapshotId로 단계를 지정하면 결재(APPROVAL)는 승인, 협의(AGREEMENT)는 완료 처리
      */
-    async approveStep(dto: ApproveStepDto, approverId: string) {
-        this.logger.log(`결재 승인 요청: ${dto.stepSnapshotId}`);
+    async approveStepOrCompleteAgreement(dto: ApproveStepDto, userId: string) {
+        this.logger.log(`승인/협의완료 요청: stepSnapshotId=${dto.stepSnapshotId}`);
 
         const result = await withTransaction(this.dataSource, async (queryRunner) => {
-            return await this.approvalProcessContext.approveStep(
-                {
-                    ...dto,
-                    approverId: approverId,
-                },
+            return await this.approvalProcessContext.approveStepOrCompleteAgreement(
+                { stepSnapshotId: dto.stepSnapshotId, userId, comment: dto.comment },
                 queryRunner,
             );
         });
 
-        // 알림 전송 (비동기)
-        this.sendApproveNotification(result.documentId, result.id, result.approver.employeeNumber).catch((error) => {
-            this.logger.error('결재 승인 알림 전송 실패', error);
-        });
-
+        const empNo = result.approver?.employeeNumber;
+        if (result.stepType === ApprovalStepType.AGREEMENT) {
+            this.sendCompleteAgreementNotification(result.documentId, empNo).catch((error) => {
+                this.logger.error('협의 완료 알림 전송 실패', error);
+            });
+        } else {
+            this.sendApproveNotification(result.documentId, result.id, empNo).catch((error) => {
+                this.logger.error('결재 승인 알림 전송 실패', error);
+            });
+        }
         return result;
     }
 
     /**
-     * 결재 반려
+     * 결재 반려 또는 협의 반려 (통합)
+     * stepSnapshotId로 단계를 지정하면 결재/협의 모두 반려 처리
      */
-    async rejectStep(dto: RejectStepDto, rejecterId: string) {
-        this.logger.log(`결재 반려 요청: ${dto.stepSnapshotId}`);
+    async rejectStepOrRejectAgreement(dto: RejectStepDto, userId: string) {
+        this.logger.log(`반려 요청: stepSnapshotId=${dto.stepSnapshotId}`);
 
         const result = await withTransaction(this.dataSource, async (queryRunner) => {
-            return await this.approvalProcessContext.rejectStep(
-                {
-                    ...dto,
-                    approverId: rejecterId,
-                },
+            return await this.approvalProcessContext.rejectStepOrRejectAgreement(
+                { stepSnapshotId: dto.stepSnapshotId, userId, comment: dto.comment },
                 queryRunner,
             );
         });
 
-        // 알림 전송 (비동기)
-        this.sendRejectNotification(result.documentId, dto.comment, result.approver.employeeNumber).catch((error) => {
-            this.logger.error('결재 반려 알림 전송 실패', error);
+        this.sendRejectNotification(result.documentId, dto.comment, result.approver?.employeeNumber).catch((error) => {
+            this.logger.error('반려 알림 전송 실패', error);
         });
-
-        return result;
-    }
-
-    /**
-     * 협의 완료
-     */
-    async completeAgreement(dto: CompleteAgreementDto, agreerId: string) {
-        this.logger.log(`협의 완료 요청: ${dto.stepSnapshotId}`);
-
-        const result = await withTransaction(this.dataSource, async (queryRunner) => {
-            return await this.approvalProcessContext.completeAgreement(
-                {
-                    ...dto,
-                    agreerId: agreerId,
-                },
-                queryRunner,
-            );
-        });
-
-        // 알림 전송 (비동기)
-        this.sendCompleteAgreementNotification(result.documentId, result.approver.employeeNumber).catch((error) => {
-            this.logger.error('협의 완료 알림 전송 실패', error);
-        });
-
         return result;
     }
 
@@ -151,39 +124,40 @@ export class ApprovalProcessService {
     }
 
     /**
-     * 상신 취소 (결재자용)
-     * 정책: 본인이 승인한 상태이고, 다음 단계가 처리되지 않은 상태에서만 가능
+     * 결재 취소 (결재자용)
+     * 정책: 반려 문서 제외, 결재 진행 중/결재 완료 문서만 가능. 기안자 1결재자 취소 시 documentContext.상신을취소한다 호출, 그 외에는 해당 단계만 대기로 되돌림.
      */
     async cancelApprovalStep(dto: CancelApprovalStepDto, approverId: string) {
         this.logger.log(`결재 취소 요청: ${dto.stepSnapshotId}, 결재자: ${approverId}`);
 
         return await withTransaction(this.dataSource, async (queryRunner) => {
-            return await this.approvalProcessContext.결재를취소한다(
+            const result = await this.approvalProcessContext.결재를취소한다(
                 {
                     ...dto,
                     approverId: approverId,
                 },
                 queryRunner,
             );
+
+            if (result.isDrafterFirstApprover) {
+                await this.documentContext.상신을취소한다(
+                    {
+                        documentId: result.documentId,
+                        drafterId: approverId,
+                        reason: dto.reason,
+                    },
+                    queryRunner,
+                );
+                return {
+                    stepSnapshotId: result.stepSnapshotId,
+                    documentId: result.documentId,
+                    message: '상신이 취소되었습니다.',
+                };
+            }
+
+            return result;
         });
     }
-
-    /**
-     * @deprecated cancelSubmit과 cancelApprovalStep으로 분리됨
-     */
-    // async cancelApproval(dto: CancelApprovalDto, cancelerId: string) {
-    //     this.logger.log(`결재 취소 요청: ${dto.documentId}`);
-
-    //     return await withTransaction(this.dataSource, async (queryRunner) => {
-    //         return await this.approvalProcessContext.cancelApproval(
-    //             {
-    //                 ...dto,
-    //                 requesterId: cancelerId,
-    //             },
-    //             queryRunner,
-    //         );
-    //     });
-    // }
 
     /**
      * 내 결재 대기 목록 조회 (페이징, 필터링)

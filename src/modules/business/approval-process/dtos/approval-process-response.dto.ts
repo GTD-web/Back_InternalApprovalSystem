@@ -408,6 +408,12 @@ export class MyPendingDocumentItemDto {
     })
     approvalSteps: ApprovalStepSummaryDto[];
 
+    @ApiPropertyOptional({
+        description: '직전 단계의 승인일 = 내 결재 차례가 시작된 시점 (달력 표시용)',
+        example: '2025-11-11T00:00:00.000Z',
+    })
+    previousStepApprovedAt?: Date;
+
     @ApiProperty({
         description: '기안(상신) 일시',
         example: '2025-11-11T00:00:00.000Z',

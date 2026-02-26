@@ -2,22 +2,15 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsUUID, IsString } from 'class-validator';
 
 /**
- * 결재 반려 / 협의 반려 DTO (통합)
+ * 협의 반려 DTO
  */
-export class RejectStepDto {
+export class RejectAgreementDto {
     @ApiProperty({
-        description: '결재 또는 협의 단계 스냅샷 ID',
+        description: '문서 ID',
         example: 'uuid',
     })
     @IsUUID()
-    stepSnapshotId: string;
-
-    // @ApiProperty({
-    //     description: '결재자 ID',
-    //     example: 'uuid',
-    // })
-    // @IsUUID()
-    // approverId: string;
+    documentId: string;
 
     @ApiProperty({
         description: '반려 사유 (필수)',

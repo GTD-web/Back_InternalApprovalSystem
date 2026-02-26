@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DocumentStatus, ApprovalStepType, ApprovalStatus } from '../../../../common/enums/approval.enum';
+import { DocumentActionButton } from '../../../../common/utils/document-action-buttons.util';
 
 /**
  * 결재자 스냅샷 메타데이터 DTO
@@ -457,17 +458,13 @@ export class DocumentResponseDto {
     approvalSteps?: ApprovalStepSnapshotResponseDto[];
 
     @ApiPropertyOptional({
-        description: '결재취소 가능 여부 (현재 사용자가 이미 승인했고, 다음 단계 수신자가 아직 미처리 상태일 때 true)',
-        example: false,
-    })
-    canCancelApproval?: boolean;
-
-    @ApiPropertyOptional({
         description:
-            '상신취소 가능 여부 (기안자이고, 결재진행중이며, 결재자가 아직 어떤 처리도 하지 않은 상태일 때 true)',
-        example: false,
+            '현재 사용자 기준 노출 액션 버튼 목록 (로그인 사용자 조회 시에만 포함). DRAFT, MODIFY, STEP_PENDING, STEP_APPROVED, IMPLEMENTATION',
+        enum: ['DRAFT', 'MODIFY', 'STEP_PENDING', 'STEP_APPROVED', 'IMPLEMENTATION'],
+        isArray: true,
+        example: ['MODIFY', 'STEP_PENDING'],
     })
-    canCancelSubmit?: boolean;
+    actionButtons?: DocumentActionButton[];
 }
 
 /**

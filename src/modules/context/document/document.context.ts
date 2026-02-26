@@ -208,8 +208,8 @@ export class DocumentContext {
     /**
      * 상신취소 (기안자용)
      *
-     * 정책: 결재진행중이고 결재자가 아직 어떤 처리도 하지 않은 상태일 때만 가능
-     * 결과: 문서 상태를 CANCELLED로 변경
+     * 정책: 결재 진행 중(PENDING) 문서만 취소 가능, 기안자만 호출 가능.
+     * 요청에 사유가 있으면 해당 값, 없으면 기본값 저장.
      */
     async 상신을취소한다(dto: CancelSubmitDto, queryRunner?: QueryRunner) {
         this.logger.log(`상신 취소 시작: ${dto.documentId}, 기안자: ${dto.drafterId}`);
@@ -217,11 +217,10 @@ export class DocumentContext {
         // 1) Document 조회
         const document = await this.documentService.findOneWithError({
             where: { id: dto.documentId },
-            relations: ['approvalSteps'],
             queryRunner,
         });
 
-        // 2) 결재진행중 상태 확인
+        // 2) 결재 진행 중 상태 확인
         if (document.status !== DocumentStatus.PENDING) {
             throw new BadRequestException('결재 진행 중인 문서만 상신취소할 수 있습니다.');
         }
@@ -231,26 +230,25 @@ export class DocumentContext {
             throw new ForbiddenException('기안자만 상신취소할 수 있습니다.');
         }
 
-        // 4) 정책 검증: 결재자가 아직 아무것도 처리하지 않은 경우에만 가능
-        const hasAnyProcessed = DocumentPolicyValidator.hasAnyApprovalProcessed(document.approvalSteps);
-        DocumentPolicyValidator.validateCancelSubmitOrThrow(document.status, hasAnyProcessed);
+        const reason = (dto.reason?.trim() ?? '') || '상신 취소';
 
-        // 5) Document 상태를 CANCELLED로 변경
-        document.취소한다(dto.reason);
-        // 8) 반려 사유를 Comment 엔티티로 생성
-        await this.commentService.createComment(
-            {
-                documentId: document.id,
-                authorId: dto.drafterId,
-                content: dto.reason,
-            },
-            queryRunner,
-        );
+        // 4) Document 상태를 CANCELLED로 변경
+        document.취소한다(reason);
+        await this.documentService.save(document, { queryRunner });
 
-        const cancelledDocument = await this.documentService.save(document, { queryRunner });
+        // 기안자가 결재 취소 시 코멘트가 중복생성되기 떄문에 주석처리
+        // // 5) 취소 사유를 Comment로 저장
+        // await this.commentService.createComment(
+        //     {
+        //         documentId: document.id,
+        //         authorId: dto.drafterId,
+        //         content: reason,
+        //     },
+        //     queryRunner,
+        // );
 
         this.logger.log(`상신 취소 완료: ${dto.documentId}, 기안자: ${dto.drafterId}`);
-        return cancelledDocument;
+        return document;
     }
 
     // ============================================
