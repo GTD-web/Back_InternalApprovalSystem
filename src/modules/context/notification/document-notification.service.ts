@@ -259,7 +259,7 @@ export class DocumentNotificationService {
                 title: `[${stepTypeText}] ${document.title}`,
                 content: `${document.drafterName || '기안자'}님이 작성한 문서가 ${stepTypeText} 대기 중입니다.`,
                 recipientEmployeeId: approverIds[0],
-                linkUrl: `/approval/document/${document.id}`,
+                linkUrl: `/current/ias/electronic-approval`,
                 metadata: {
                     documentId: document.id,
                     stepId: steps[0].id,
@@ -273,7 +273,7 @@ export class DocumentNotificationService {
                 title: `[${stepTypeText}] ${document.title}`,
                 content: `${document.drafterName || '기안자'}님이 작성한 문서가 ${stepTypeText} 대기 중입니다.`,
                 recipientEmployeeIds: approverIds,
-                linkUrl: `/approval/document/${document.id}`,
+                linkUrl: `/current/ias/electronic-approval`,
                 metadata: {
                     documentId: document.id,
                     stepType: steps[0].stepType,
@@ -309,7 +309,7 @@ export class DocumentNotificationService {
             title: `[참조] ${document.title}`,
             content: `${document.drafterName || '기안자'}님의 문서가 최종 승인 완료되었습니다.`,
             recipientEmployeeIds: referenceIds,
-            linkUrl: `/approval/document/${document.id}`,
+            linkUrl: `/current/ias/electronic-approval`,
             metadata: {
                 documentId: document.id,
                 status: document.status,
@@ -337,7 +337,7 @@ export class DocumentNotificationService {
             title,
             content,
             recipientEmployeeId: document.drafterId,
-            linkUrl: `/approval/document/${document.id}`,
+            linkUrl: `/current/ias/electronic-approval`,
             metadata: {
                 documentId: document.id,
                 status: status,

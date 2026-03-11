@@ -370,6 +370,34 @@ export class DocumentController {
         return await this.documentService.submitDocumentDirect(dto, user.id);
     }
 
+    @Post('submit-direct-per-consulter')
+    @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({
+        summary: '합의자별 바로 기안',
+        description:
+            '바로 기안과 동일한 요청 Body를 사용합니다. 결재선(approvalSteps)에서 합의(AGREEMENT) 단계를 분리하여, 합의자 수만큼 문서를 각각 상신합니다.\n\n' +
+            '**예시:** 결재1-합의2-합의3-합의4-결재5 → (결재1-합의2-결재5), (결재1-합의3-결재5), (결재1-합의4-결재5) 3건 상신\n\n' +
+            '**테스트 시나리오:**\n' +
+            '- ✅ 정상: 합의 단계가 있으면 해당 수만큼 문서 상신\n' +
+            '- ✅ approvalSteps 없거나 합의 단계 없으면 단일 문서로 바로 기안과 동일 처리',
+    })
+    @ApiResponse({
+        status: 201,
+        description: '문서 기안 성공 (상신된 문서 배열)',
+        type: [SubmitDocumentResponseDto],
+    })
+    @ApiResponse({
+        status: 400,
+        description: '잘못된 요청',
+    })
+    @ApiResponse({
+        status: 401,
+        description: '인증 실패',
+    })
+    async submitDocumentDirectPerConsulter(@User() user: Employee, @Body() dto: SubmitDocumentDirectDto) {
+        return await this.documentService.submitDocumentDirectPerConsulter(dto, user.id);
+    }
+
     @Get(':documentId')
     @ApiOperation({
         summary: '문서 상세 조회',
