@@ -152,7 +152,9 @@ export class DocumentFilterBuilder {
 
     /**
      * 미결함 필터 (현재 내가 결재·협의해야 하는 문서)
-     * 결재진행중 + 내가 합의 또는 결재 단계에 있고 대기 중 + 앞선 순서 단계 모두 승인됨
+     * - 결재(APPROVAL): 앞선 모든 단계가 승인된 경우에만 노출
+     * - 합의(AGREEMENT): 가장 가까운 이전 결재단계(APPROVAL)가 승인된 경우 노출 → 이후 합의자 모두에게 동시 노출
+     *   예: 결재1-합의2-합의3-합의4-합의5-결재6 에서 결재1 자동승인 시 합의2~5 모두 미결함에 노출
      */
     private applyPendingMineFilter(qb: SelectQueryBuilder<Document>, userId: string): void {
         qb.andWhere('document.drafterId != :userId', { userId }).andWhere(
@@ -165,16 +167,27 @@ export class DocumentFilterBuilder {
                 AND d.status = :pendingStatus
                 AND d."drafterId" != :userId
                 AND my_step.status = :pendingStepStatus
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM approval_step_snapshots prior_step
-                    WHERE prior_step."documentId" = my_step."documentId"
-                    AND prior_step."stepOrder" < my_step."stepOrder"
-                    AND prior_step.status != :approvedStepStatus
+                AND (
+                    (my_step."stepType" = :agreementType AND NOT EXISTS (
+                        SELECT 1 FROM approval_step_snapshots prior_step
+                        WHERE prior_step."documentId" = my_step."documentId"
+                        AND prior_step."stepOrder" < my_step."stepOrder"
+                        AND prior_step."stepType" = :approvalType
+                        AND prior_step.status != :approvedStepStatus
+                    ))
+                    OR
+                    (my_step."stepType" = :approvalType AND NOT EXISTS (
+                        SELECT 1 FROM approval_step_snapshots prior_step
+                        WHERE prior_step."documentId" = my_step."documentId"
+                        AND prior_step."stepOrder" < my_step."stepOrder"
+                        AND prior_step.status != :approvedStepStatus
+                    ))
                 )
             )`,
             {
                 agreementApprovalTypes: [ApprovalStepType.AGREEMENT, ApprovalStepType.APPROVAL],
+                agreementType: ApprovalStepType.AGREEMENT,
+                approvalType: ApprovalStepType.APPROVAL,
                 pendingStatus: DocumentStatus.PENDING,
                 pendingStepStatus: ApprovalStatus.PENDING,
                 approvedStepStatus: ApprovalStatus.APPROVED,

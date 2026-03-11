@@ -50,6 +50,9 @@ function splitStepsByType(steps: Step[]): {
  * - 진행중: 이전 o, 나 x, 이후 x
  * - 완료: 이전 o, 나 o, 이후 x
  * - 종료: 이전 o, 나 o, 이후 o
+ *
+ * 합의(AGREEMENT)인 경우: "이전 o"는 이전 결재단계(APPROVAL)만 모두 승인된 경우 (이전 합의 단계는 무시).
+ * 결재(APPROVAL) 등 그 외: "이전 o"는 이전 모든 단계가 승인된 경우 (기존 로직).
  */
 function getMyStepState(
     steps: Step[],
@@ -67,7 +70,15 @@ function getMyStepState(
     const before = myIndex >= 0 ? sorted.slice(0, myIndex) : [];
     const after = myIndex >= 0 ? sorted.slice(myIndex + 1) : [];
 
-    const allBeforeApproved = before.length === 0 || before.every((s) => s.status === ApprovalStatus.APPROVED);
+    // 합의(AGREEMENT): 이전 결재단계(APPROVAL)만 승인되었으면 진행 가능. 결재(APPROVAL) 등: 이전 전체 승인 필요.
+    const allBeforeApproved =
+        before.length === 0
+            ? true
+            : myStep?.stepType === ApprovalStepType.AGREEMENT
+              ? before.filter((s) => s.stepType === ApprovalStepType.APPROVAL).every((s) => s.status === ApprovalStatus.APPROVED)
+              : before.every((s) => s.status === ApprovalStatus.APPROVED);
+    // (기존) const allBeforeApproved = before.length === 0 || before.every((s) => s.status === ApprovalStatus.APPROVED);
+
     const allAfterApproved = after.length > 0 && after.every((s) => s.status === ApprovalStatus.APPROVED);
     const myPending = myStep?.status === ApprovalStatus.PENDING;
     const myApproved = myStep?.status === ApprovalStatus.APPROVED;

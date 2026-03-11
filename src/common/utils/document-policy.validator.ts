@@ -395,7 +395,8 @@ export class DocumentPolicyValidator {
      * 결재 진행 순서를 검증합니다.
      *
      * 정책: 결재선은 하나의 순서 값(stepOrder)으로 이어지며, 협의와 결재가 섞일 수 있음.
-     * 내 단계보다 앞선 순서 값(stepOrder)을 가진 모든 단계(협의·결재 구분 없이)가 승인되어 있어야 함.
+     * - 합의(AGREEMENT): 가장 가까운 이전 결재단계(APPROVAL)가 승인된 경우에만 처리 가능 → 이전 결재단계만 검사
+     * - 결재/시행(APPROVAL, IMPLEMENTATION): 앞선 모든 단계가 승인된 경우에만 처리 가능
      *
      * @param currentStepType 현재 처리하려는 단계 타입
      * @param currentStepOrder 현재 처리하려는 단계 순서
@@ -412,13 +413,25 @@ export class DocumentPolicyValidator {
         }>,
     ): ValidationResult {
         const previousSteps = allSteps.filter((s) => s.stepOrder < currentStepOrder);
-        const pendingPrevious = previousSteps.filter((s) => s.status !== ApprovalStatus.APPROVED);
 
-        if (pendingPrevious.length > 0) {
-            return {
-                isValid: false,
-                errorMessage: '내 순서보다 앞선 모든 단계가 완료되어야 현재 단계를 처리할 수 있습니다.',
-            };
+        if (currentStepType === ApprovalStepType.AGREEMENT) {
+            const pendingPriorApproval = previousSteps.filter(
+                (s) => s.stepType === ApprovalStepType.APPROVAL && s.status !== ApprovalStatus.APPROVED,
+            );
+            if (pendingPriorApproval.length > 0) {
+                return {
+                    isValid: false,
+                    errorMessage: '가장 가까운 이전 결재단계가 승인된 후에만 협의를 처리할 수 있습니다.',
+                };
+            }
+        } else {
+            const pendingPrevious = previousSteps.filter((s) => s.status !== ApprovalStatus.APPROVED);
+            if (pendingPrevious.length > 0) {
+                return {
+                    isValid: false,
+                    errorMessage: '내 순서보다 앞선 모든 단계가 완료되어야 현재 단계를 처리할 수 있습니다.',
+                };
+            }
         }
 
         return { isValid: true };
@@ -488,6 +501,33 @@ export class DocumentPolicyValidator {
                 step.status !== ApprovalStatus.PENDING &&
                 step.status !== ApprovalStatus.CANCELLED,
         );
+    }
+
+    /**
+     * 결재 취소 가능 여부 검증: 가장 가까운 이후 결재단계(APPROVAL)가 아직 승인되지 않은 경우에만 취소 가능.
+     * 이후 결재단계가 이미 승인되었으면 취소할 수 없음.
+     *
+     * @throws BadRequestException 이후 결재단계가 이미 승인된 경우
+     */
+    static validateCancelOrderOrThrow(
+        currentStepOrder: number,
+        allSteps: Array<{
+            stepType: ApprovalStepType;
+            stepOrder: number;
+            status: ApprovalStatus;
+        }>,
+    ): void {
+        const laterApprovalApproved = allSteps.some(
+            (s) =>
+                s.stepOrder > currentStepOrder &&
+                s.stepType === ApprovalStepType.APPROVAL &&
+                s.status === ApprovalStatus.APPROVED,
+        );
+        if (laterApprovalApproved) {
+            throw new BadRequestException(
+                '이후 결재단계가 이미 승인되어 취소할 수 없습니다. 가장 가까운 이후 결재단계까지만 승인된 경우에 취소 가능합니다.',
+            );
+        }
     }
 
     /**
