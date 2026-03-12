@@ -75,7 +75,9 @@ function getMyStepState(
         before.length === 0
             ? true
             : myStep?.stepType === ApprovalStepType.AGREEMENT
-              ? before.filter((s) => s.stepType === ApprovalStepType.APPROVAL).every((s) => s.status === ApprovalStatus.APPROVED)
+              ? before
+                    .filter((s) => s.stepType === ApprovalStepType.APPROVAL)
+                    .every((s) => s.status === ApprovalStatus.APPROVED)
               : before.every((s) => s.status === ApprovalStatus.APPROVED);
     // (기존) const allBeforeApproved = before.length === 0 || before.every((s) => s.status === ApprovalStatus.APPROVED);
 
@@ -109,6 +111,9 @@ export function getDocumentActionButtons(document: DocumentForActionButtons, use
 
     // 합의/결재 · 수신참조 흐름별 상태 (getMyStepState의 isWaiting, isProgress, isComplete, isEnded만 사용)
     const stateAgreementApproval = getMyStepState(agreementOrApproval, userId);
+
+    // 시행
+    const stateImplementation = getMyStepState(implementation, userId);
 
     // 수신참조 흐름 기준: 내 참조 단계 진행중 여부
     const stateReference = getMyStepState(reference, userId);
@@ -144,10 +149,7 @@ export function getDocumentActionButtons(document: DocumentForActionButtons, use
     }
 
     // 5. IMPLEMENTATION: 시행 덩이만, 시행자 + 시행 단계 진행중 → 시행완료
-    if (
-        document.status === DocumentStatus.APPROVED &&
-        implementation.some((s) => s.approverId === userId && s.status === ApprovalStatus.PENDING)
-    ) {
+    if (stateImplementation.isProgress && document.status === DocumentStatus.APPROVED) {
         buttons.push('IMPLEMENTATION');
     }
 
