@@ -69,7 +69,6 @@ function getMyStepState(
     const myStep = myIndex >= 0 ? sorted[myIndex] : undefined;
     const before = myIndex >= 0 ? sorted.slice(0, myIndex) : [];
     const after = myIndex >= 0 ? sorted.slice(myIndex + 1) : [];
-
     // 합의(AGREEMENT): 이전 결재단계(APPROVAL)만 승인되었으면 진행 가능. 결재(APPROVAL) 등: 이전 전체 승인 필요.
     const allBeforeApproved =
         before.length === 0
@@ -84,7 +83,6 @@ function getMyStepState(
     const allAfterApproved = after.length > 0 && after.every((s) => s.status === ApprovalStatus.APPROVED);
     const myPending = myStep?.status === ApprovalStatus.PENDING;
     const myApproved = myStep?.status === ApprovalStatus.APPROVED;
-
     const isWaiting = myPending && !allBeforeApproved;
     const isProgress = myPending && allBeforeApproved;
     const isComplete = myApproved && (after.length === 0 || !allAfterApproved);
@@ -108,15 +106,8 @@ export function getDocumentActionButtons(document: DocumentForActionButtons, use
     const steps = document.approvalSteps ?? [];
     const { agreementOrApproval, implementation, reference } = splitStepsByType(steps);
     const isDrafter = document.drafterId === userId;
-
     // 합의/결재 · 수신참조 흐름별 상태 (getMyStepState의 isWaiting, isProgress, isComplete, isEnded만 사용)
     const stateAgreementApproval = getMyStepState(agreementOrApproval, userId);
-
-    // 시행
-    const stateImplementation = getMyStepState(implementation, userId);
-
-    // 수신참조 흐름 기준: 내 참조 단계 진행중 여부
-    const stateReference = getMyStepState(reference, userId);
 
     const buttons: DocumentActionButton[] = [];
 
@@ -149,7 +140,7 @@ export function getDocumentActionButtons(document: DocumentForActionButtons, use
     }
 
     // 5. IMPLEMENTATION: 시행 덩이만, 시행자 + 시행 단계 진행중 → 시행완료
-    if (stateImplementation.isProgress && document.status === DocumentStatus.APPROVED) {
+    if (stateAgreementApproval.isEnded && document.status === DocumentStatus.APPROVED) {
         buttons.push('IMPLEMENTATION');
     }
 
