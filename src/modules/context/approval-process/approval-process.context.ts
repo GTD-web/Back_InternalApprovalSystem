@@ -287,6 +287,8 @@ export class ApprovalProcessContext {
             throw new BadRequestException('반려 사유를 입력해야 합니다.');
         }
 
+        await this.validateApprovalOrder(step, queryRunner);
+
         step.반려한다();
         const rejectedStep = await this.approvalStepSnapshotService.save(step, {
             queryRunner,
@@ -613,17 +615,18 @@ export class ApprovalProcessContext {
 
         const reason = (dto.reason?.trim() ?? '') || '결재 취소';
 
-        // 7) 기안자(1결재자) 여부: 첫 번째 결재 단계의 결재자가 기안자와 동일한 경우
+        // 7) 이후 결재단계 취소 가능 여부 + 기안자(1결재자) 여부 판단용 전체 단계 조회
         const allSteps = await this.approvalStepSnapshotService.findAll({
             where: { documentId: document.id },
             order: { stepOrder: 'ASC' },
             queryRunner,
         });
+        DocumentPolicyValidator.validateCancelOrderOrThrow(step.stepOrder, allSteps);
         const firstApprovalStep = allSteps.find((s) => s.stepType === ApprovalStepType.APPROVAL);
         const isDrafterFirstApprover =
             firstApprovalStep != null && firstApprovalStep.id === step.id && step.approverId === document.drafterId;
 
-        // 8) 단계 대기로 되돌리기
+        // 8) 단계 대기로 되돌리기 (기안자 1결재자 여부는 위에서 사용)
         step.대기한다();
         await this.approvalStepSnapshotService.save(step, { queryRunner });
 

@@ -20,6 +20,7 @@ import {
     DocumentFilterDto,
 } from '../../../context/document/dtos/document.dto';
 import { ApprovalStepType, DocumentStatus } from 'src/common/enums/approval.enum';
+import type { ApprovalStepSnapshotItemDto } from '../dtos/approval-step-snapshot.dto';
 import { CreateCommentDto, UpdateCommentDto } from '../dtos/comment.dto';
 import { withTransaction } from 'src/common/utils/transaction.util';
 import { DataSource } from 'typeorm';
@@ -143,7 +144,7 @@ export class DocumentService {
             return document;
         }
         const actionButtons = getDocumentActionButtons(document, userId);
-        return { ...document, actionButtons };
+        return { ...document, actionButtons } as DocumentResponseDto;
     }
 
     /**
@@ -243,6 +244,84 @@ export class DocumentService {
 
         this.logger.log(`바로 기안 및 자동 승인 처리 완료: ${submittedDocument.id}`);
         return submittedDocument;
+    }
+
+    /**
+     * 합의자별 바로 기안 (바로기안 API와 동일한 DTO 사용)
+     * 들어온 결재선(approvalSteps)에서 합의(AGREEMENT) 단계를 분리하여,
+     * 합의자 수만큼 결재선을 만든 뒤 각각 문서 1건씩 상신합니다.
+     * 예: 결재1-합의2-합의3-합의4-결재5 → (결재1-합의2-결재5), (결재1-합의3-결재5), (결재1-합의4-결재5) 3건 상신
+     */
+    async submitDocumentDirectPerConsulter(
+        dto: SubmitDocumentDirectDto,
+        drafterId: string,
+    ): Promise<DocumentResponseDto[]> {
+        if (!dto.approvalSteps?.length) {
+            this.logger.warn('합의자별 바로 기안: approvalSteps가 없어 단일 상신으로 처리합니다.');
+            const one = await this.submitDocumentDirect(dto, drafterId);
+            return [one as DocumentResponseDto];
+        }
+
+        const steps = [...dto.approvalSteps].sort((a, b) => a.stepOrder - b.stepOrder);
+        const agreementSteps = steps.filter((s) => s.stepType === ApprovalStepType.AGREEMENT);
+        const nonAgreementSteps = steps.filter((s) => s.stepType !== ApprovalStepType.AGREEMENT);
+
+        if (agreementSteps.length === 0) {
+            this.logger.warn('합의자별 바로 기안: 합의 단계가 없어 단일 상신으로 처리합니다.');
+            const one = await this.submitDocumentDirect(dto, drafterId);
+            return [one as DocumentResponseDto];
+        }
+
+        const minAgreementOrder = Math.min(...agreementSteps.map((s) => s.stepOrder));
+        const maxAgreementOrder = Math.max(...agreementSteps.map((s) => s.stepOrder));
+        const beforeAgreement = nonAgreementSteps.filter((s) => s.stepOrder < minAgreementOrder);
+        const afterAgreement = nonAgreementSteps.filter((s) => s.stepOrder > maxAgreementOrder);
+
+        // 1) 단일 트랜잭션으로 전건 생성·기안 (하나라도 실패 시 전부 롤백)
+        const submittedList = await withTransaction(this.dataSource, async (queryRunner) => {
+            const list: Awaited<ReturnType<DocumentContext['submitDocument']>>[] = [];
+            for (const agreementStep of agreementSteps) {
+                const line: ApprovalStepSnapshotItemDto[] = [
+                    ...beforeAgreement,
+                    agreementStep,
+                    ...afterAgreement,
+                ].map((s, idx) => ({ ...s, stepOrder: idx + 1 }));
+
+                const createDto: ContextCreateDocumentDto = {
+                    drafterId,
+                    documentTemplateId: dto.documentTemplateId,
+                    title: dto.title,
+                    content: dto.content,
+                    metadata: dto.metadata,
+                    approvalSteps: line,
+                };
+
+                const draft = await this.documentContext.createDocument(createDto, queryRunner);
+                const submitDto: SubmitDocumentDto = {
+                    documentId: draft.id,
+                    documentTemplateId: dto.documentTemplateId,
+                    metadata: dto.metadata,
+                    approvalSteps: line,
+                };
+                const submitted = await this.documentContext.submitDocument(submitDto, queryRunner);
+                list.push(submitted);
+            }
+            return list;
+        });
+
+        // 2) 트랜잭션 성공 후 자동 승인 및 알림 전송
+        for (const submitted of submittedList) {
+            await this.approvalProcessContext.autoApproveIfDrafterIsFirstApprover(
+                submitted.id,
+                submitted.drafterId,
+            );
+            this.sendSubmitNotification(submitted.id, submitted.drafterId).catch((err) => {
+                this.logger.error('합의자별 바로 기안 알림 전송 실패', err);
+            });
+        }
+
+        this.logger.log(`합의자별 바로 기안 완료: ${submittedList.length}건`);
+        return submittedList as DocumentResponseDto[];
     }
 
     /**
