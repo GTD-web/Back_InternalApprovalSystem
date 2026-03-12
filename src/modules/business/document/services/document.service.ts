@@ -144,7 +144,7 @@ export class DocumentService {
             return document;
         }
         const actionButtons = getDocumentActionButtons(document, userId);
-        return { ...document, actionButtons };
+        return { ...document, actionButtons } as DocumentResponseDto;
     }
 
     /**

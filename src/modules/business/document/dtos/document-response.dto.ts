@@ -2,6 +2,19 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DocumentStatus, ApprovalStepType, ApprovalStatus } from '../../../../common/enums/approval.enum';
 import { DocumentActionButton } from '../../../../common/utils/document-action-buttons.util';
 
+/** 스탭(또는 문서) 단위 액션 버튼 — id는 step.id 또는 "document" */
+export class ActionButtonsByStepDto {
+    @ApiProperty({ description: 'step.id 또는 "document"', example: 'document' })
+    id: string;
+
+    @ApiProperty({
+        description: '해당 스탭/문서에 노출할 버튼',
+        type: [String],
+        enum: ['DRAFT', 'MODIFY', 'STEP_PENDING', 'STEP_APPROVED', 'IMPLEMENTATION'],
+    })
+    buttons: DocumentActionButton[];
+}
+
 /**
  * 결재자 스냅샷 메타데이터 DTO
  */
@@ -459,12 +472,11 @@ export class DocumentResponseDto {
 
     @ApiPropertyOptional({
         description:
-            '현재 사용자 기준 노출 액션 버튼 목록 (로그인 사용자 조회 시에만 포함). DRAFT, MODIFY, STEP_PENDING, STEP_APPROVED, IMPLEMENTATION',
-        enum: ['DRAFT', 'MODIFY', 'STEP_PENDING', 'STEP_APPROVED', 'IMPLEMENTATION'],
-        isArray: true,
-        example: ['MODIFY', 'STEP_PENDING'],
+            '스탭(또는 문서) 단위 액션 버튼 (로그인 사용자 조회 시에만 포함). id는 step.id 또는 "document"',
+        type: [ActionButtonsByStepDto],
+        example: [{ id: 'document', buttons: ['DRAFT', 'MODIFY'] }, { id: 'step-uuid-1', buttons: ['STEP_PENDING'] }],
     })
-    actionButtons?: DocumentActionButton[];
+    actionButtons?: ActionButtonsByStepDto[];
 }
 
 /**

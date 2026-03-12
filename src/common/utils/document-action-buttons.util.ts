@@ -6,6 +6,12 @@ import { DocumentStatus, ApprovalStatus, ApprovalStepType } from '../enums/appro
  */
 export type DocumentActionButton = 'DRAFT' | 'MODIFY' | 'STEP_PENDING' | 'STEP_APPROVED' | 'IMPLEMENTATION';
 
+/** 스탭(또는 문서) 단위로 구분된 액션 버튼 응답 */
+export interface DocumentActionButtonsByStepDto {
+    id: string;
+    buttons: DocumentActionButton[];
+}
+
 /** 유틸 입력용 문서 최소 형태 (approvalSteps는 stepOrder ASC 가정) */
 export interface DocumentForActionButtons {
     status: DocumentStatus;
@@ -45,104 +51,111 @@ function splitStepsByType(steps: Step[]): {
 }
 
 /**
- * 본인 기준 결재단계 상태 (주어진 단계 배열 내에서만 판단)
- * - 대기중: 이전 x, 나 x, 이후 x
- * - 진행중: 이전 o, 나 x, 이후 x
- * - 완료: 이전 o, 나 o, 이후 x
- * - 종료: 이전 o, 나 o, 이후 o
- *
- * 합의(AGREEMENT)인 경우: "이전 o"는 이전 결재단계(APPROVAL)만 모두 승인된 경우 (이전 합의 단계는 무시).
- * 결재(APPROVAL) 등 그 외: "이전 o"는 이전 모든 단계가 승인된 경우 (기존 로직).
+ * 단계 하나에 대해 "이전 승인 여부" 계산 (합의는 이전 결재단계만, 그 외는 이전 전체)
  */
-function getMyStepState(
-    steps: Step[],
-    userId: string,
-): {
+function isAllBeforeApprovedForStep(before: Step[], step: Step): boolean {
+    if (before.length === 0) return true;
+    return step.stepType === ApprovalStepType.AGREEMENT
+        ? before
+              .filter((s) => s.stepType === ApprovalStepType.APPROVAL)
+              .every((s) => s.status === ApprovalStatus.APPROVED)
+        : before.every((s) => s.status === ApprovalStatus.APPROVED);
+}
+
+/**
+ * 단계 하나의 상태 (대기중/진행중/완료/종료)
+ */
+export interface MyStepStateItem {
+    step: Step;
     isWaiting: boolean;
     isProgress: boolean;
     isComplete: boolean;
     isEnded: boolean;
-    myStep: Step | undefined;
-} {
-    const sorted = sortByStepOrder(steps);
-    const myIndex = sorted.findIndex((s) => s.approverId === userId);
-    const myStep = myIndex >= 0 ? sorted[myIndex] : undefined;
-    const before = myIndex >= 0 ? sorted.slice(0, myIndex) : [];
-    const after = myIndex >= 0 ? sorted.slice(myIndex + 1) : [];
-    // 합의(AGREEMENT): 이전 결재단계(APPROVAL)만 승인되었으면 진행 가능. 결재(APPROVAL) 등: 이전 전체 승인 필요.
-    const allBeforeApproved =
-        before.length === 0
-            ? true
-            : myStep?.stepType === ApprovalStepType.AGREEMENT
-              ? before
-                    .filter((s) => s.stepType === ApprovalStepType.APPROVAL)
-                    .every((s) => s.status === ApprovalStatus.APPROVED)
-              : before.every((s) => s.status === ApprovalStatus.APPROVED);
-    // (기존) const allBeforeApproved = before.length === 0 || before.every((s) => s.status === ApprovalStatus.APPROVED);
-
-    const allAfterApproved = after.length > 0 && after.every((s) => s.status === ApprovalStatus.APPROVED);
-    const myPending = myStep?.status === ApprovalStatus.PENDING;
-    const myApproved = myStep?.status === ApprovalStatus.APPROVED;
-    const isWaiting = myPending && !allBeforeApproved;
-    const isProgress = myPending && allBeforeApproved;
-    const isComplete = myApproved && (after.length === 0 || !allAfterApproved);
-    const isEnded = myApproved && after.length > 0 && allAfterApproved;
-
-    return { isWaiting, isProgress, isComplete, isEnded, myStep };
 }
 
 /**
- * 문서 단건 조회 시 현재 사용자 기준으로 노출할 액션 버튼 목록 계산
+ * 본인 기준 결재단계 상태 — 스탭별로 개별 반환 (OR 합치지 않음)
+ * - 대기중: 이전 x, 나 x, 이후 x
+ * - 진행중: 이전 o, 나 x, 이후 x
+ * - 완료: 이전 o, 나 o, 이후 x
+ * - 종료: 이전 o, 나 o, 이후 o
+ * 합의(AGREEMENT): "이전 o" = 이전 결재단계(APPROVAL)만 승인.
+ */
+function getMyStepStates(steps: Step[], userId: string): MyStepStateItem[] {
+    const sorted = sortByStepOrder(steps);
+    const myIndices = sorted.map((s, i) => (s.approverId === userId ? i : -1)).filter((i) => i >= 0);
+    const result: MyStepStateItem[] = [];
+
+    for (const idx of myIndices) {
+        const step = sorted[idx];
+        const before = sorted.slice(0, idx);
+        const after = sorted.slice(idx + 1);
+        const allBeforeApproved = isAllBeforeApprovedForStep(before, step);
+        const allAfterApproved = after.length > 0 && after.every((s) => s.status === ApprovalStatus.APPROVED);
+        const myPending = step.status === ApprovalStatus.PENDING;
+        const myApproved = step.status === ApprovalStatus.APPROVED;
+
+        result.push({
+            step,
+            isWaiting: myPending && !allBeforeApproved,
+            isProgress: myPending && allBeforeApproved,
+            isComplete: myApproved && (after.length === 0 || !allAfterApproved),
+            isEnded: myApproved && after.length > 0 && allAfterApproved,
+        });
+    }
+    return result;
+}
+
+/**
+ * 문서 단건 조회 시 현재 사용자 기준으로 노출할 액션 버튼을 스탭(또는 문서) 단위로 계산
  * @see document-action-buttons.flow.md
  * @param document 문서 (status, drafterId, approvalSteps 포함)
  * @param userId 현재 사용자 ID (없으면 빈 배열 반환)
- * @returns 노출할 버튼 타입 배열 (흐름도 순: DRAFT, MODIFY, STEP_PENDING, STEP_APPROVED, IMPLEMENTATION)
+ * @returns [{ id, buttons }] — id는 step.id 또는 "document"(문서 레벨 버튼)
  */
-export function getDocumentActionButtons(document: DocumentForActionButtons, userId?: string): DocumentActionButton[] {
+export function getDocumentActionButtons(
+    document: DocumentForActionButtons,
+    userId?: string,
+): DocumentActionButtonsByStepDto[] {
     if (!userId) {
         return [];
     }
 
     const steps = document.approvalSteps ?? [];
-    const { agreementOrApproval, implementation, reference } = splitStepsByType(steps);
+    const { agreementOrApproval, implementation } = splitStepsByType(steps);
     const isDrafter = document.drafterId === userId;
-    // 합의/결재 · 수신참조 흐름별 상태 (getMyStepState의 isWaiting, isProgress, isComplete, isEnded만 사용)
-    const stateAgreementApproval = getMyStepState(agreementOrApproval, userId);
+    const stepStates = getMyStepStates(agreementOrApproval, userId);
+    const result: DocumentActionButtonsByStepDto[] = [];
 
-    const buttons: DocumentActionButton[] = [];
-
-    // 1. DRAFT: 기안자 + 임시저장 → 삭제, 문서상신
+    // 문서 레벨: 임시저장 + 기안자 → DRAFT, MODIFY
     if (document.status === DocumentStatus.DRAFT && isDrafter) {
-        buttons.push('DRAFT');
+        result.push({ id: 'document', buttons: ['DRAFT', 'MODIFY'] });
     }
 
-    // 2. MODIFY: 기안자(임시저장) 또는 결재인 + 합의/결재 진행중·완료 → 문서수정
-    if (document.status === DocumentStatus.DRAFT && isDrafter) {
-        buttons.push('MODIFY');
-    } else if (
-        document.status === DocumentStatus.PENDING &&
-        (stateAgreementApproval.isProgress || stateAgreementApproval.isComplete)
-    ) {
-        buttons.push('MODIFY');
+    // 합의/결재 스탭별 버튼
+    for (const { step, isProgress, isComplete } of stepStates) {
+        const buttons: DocumentActionButton[] = [];
+        if (document.status === DocumentStatus.PENDING && isProgress) {
+            buttons.push('MODIFY', 'STEP_PENDING');
+        } else if (
+            (document.status === DocumentStatus.PENDING || document.status === DocumentStatus.APPROVED) &&
+            isComplete
+        ) {
+            buttons.push('MODIFY', 'STEP_APPROVED');
+        }
+        if (buttons.length > 0) {
+            result.push({ id: step.id, buttons });
+        }
     }
 
-    // 3. STEP_PENDING: 합의/결재 진행중(내 차례) → 승인·반려
-    if (document.status === DocumentStatus.PENDING && stateAgreementApproval.isProgress) {
-        buttons.push('STEP_PENDING');
+    // 시행 스탭별: 결재완료 문서에서 내 시행 단계가 대기 중일 때
+    if (document.status === DocumentStatus.APPROVED) {
+        for (const step of implementation) {
+            if (step.approverId === userId && step.status === ApprovalStatus.PENDING) {
+                result.push({ id: step.id, buttons: ['IMPLEMENTATION'] });
+            }
+        }
     }
 
-    // 4. STEP_APPROVED: 합의/결재만, 완료(이전 o·나 o·이후 x) → 승인취소
-    if (
-        (document.status === DocumentStatus.PENDING || document.status === DocumentStatus.APPROVED) &&
-        stateAgreementApproval.isComplete
-    ) {
-        buttons.push('STEP_APPROVED');
-    }
-
-    // 5. IMPLEMENTATION: 시행 덩이만, 시행자 + 시행 단계 진행중 → 시행완료
-    if (stateAgreementApproval.isEnded && document.status === DocumentStatus.APPROVED) {
-        buttons.push('IMPLEMENTATION');
-    }
-
-    return buttons;
+    return result;
 }

@@ -403,9 +403,7 @@ export class DocumentController {
         summary: '문서 상세 조회',
         description:
             '특정 문서의 상세 정보를 조회합니다. 로그인 사용자로 조회 시 응답에 `actionButtons`가 포함됩니다.\n\n' +
-            '**actionButtons:**\n' +
-            '- 현재 사용자 기준으로 노출할 액션 버튼 타입 배열 (DRAFT, MODIFY, STEP_PENDING, STEP_APPROVED, IMPLEMENTATION)\n' +
-            '- 문서 상태·결재선·역할에 따라 계산됨\n\n' +
+            '**actionButtons:** 스탭(또는 문서) 단위 배열. 각 항목: { id: step.id 또는 "document", buttons: ["MODIFY", "STEP_PENDING"] 등 }\n\n' +
             '**테스트 시나리오:**\n' +
             '- ✅ 정상: 문서 상세 조회\n' +
             '- ❌ 실패: 존재하지 않는 문서 ID',
