@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { RouterModule } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { typeOrmConfig } from './configs/typeorm.config';
@@ -40,6 +41,7 @@ import { NotificationContextModule } from './modules/context/notification';
             inject: [ConfigService],
             useFactory: typeOrmConfig,
         }),
+        ScheduleModule.forRoot(),
         RouterModule.register([
             // {
             //     path: 'document',

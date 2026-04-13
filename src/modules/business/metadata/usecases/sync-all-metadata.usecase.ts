@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MetadataSyncContext } from '../../../context/metadata-sync/metadata-sync.context';
+import type { MetadataSyncAllInput } from '../../../context/metadata-sync/metadata-sync.types';
 import { SyncMetadataResponseDto } from '../dtos';
 import { ExternalMetadataService } from '../services/external-metadata.service';
 
@@ -25,17 +26,24 @@ export class SyncAllMetadataUsecase {
         try {
             // 1. 외부 API에서 메타데이터 조회
             this.logger.log('외부 API에서 메타데이터 조회 중...');
-            const externalData = await this.externalMetadataService.fetchAllMetadata();
+            const externalData = await this.externalMetadataService.fetchAllMetadata({
+                includeTerminated: true,
+                includeInactiveDepartments: true,
+            });
 
             // 2. 컨텍스트를 통해 메타데이터 동기화 실행
             this.logger.log('메타데이터 동기화 시작...');
-            await this.metadataSyncContext.syncAllMetadata({
-                positions: externalData.positions || [],
-                ranks: externalData.ranks || [],
-                departments: externalData.departments || [],
-                employees: externalData.employees || [],
-                employeeDepartmentPositions: externalData.employeeDepartmentPositions || [],
-            });
+            const syncPayload: MetadataSyncAllInput = {
+                positions: externalData.positions,
+                ranks: externalData.ranks,
+                departments: externalData.departments.map((d) => ({
+                    ...d,
+                    isCurrent: d.isActive,
+                })),
+                employees: externalData.employees,
+                employeeDepartmentPositions: externalData.employeeDepartmentPositions,
+            };
+            await this.metadataSyncContext.syncAllMetadata(syncPayload);
 
             // 3. 성공 응답 반환
             const response: SyncMetadataResponseDto = {

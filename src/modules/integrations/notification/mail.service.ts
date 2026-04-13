@@ -31,14 +31,14 @@ export class MailService {
      * 다중 수신자 메일 전송 — POST {NOTIFICATION_SERVICE_URL}/mail/send-multiple
      */
     async sendMultiple(dto: MultipleRecipientsMailDto, authorization?: string): Promise<MultipleMailResponseDto> {
-        const isLocal = process.env.NODE_ENV === 'local';
-        if (isLocal) {
-            return {
-                success: true,
-                message: '메일 미전송 (로컬 환경)',
-                recipientCount: dto.recipients.length,
-            };
-        }
+        // const isLocal = process.env.NODE_ENV === 'local';
+        // if (isLocal) {
+        //     return {
+        //         success: true,
+        //         message: '메일 미전송 (로컬 환경)',
+        //         recipientCount: dto.recipients.length,
+        //     };
+        // }
 
         if (!dto.recipients?.length) {
             throw new HttpException('최소 1명 이상의 수신자가 필요합니다.', HttpStatus.BAD_REQUEST);

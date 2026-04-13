@@ -23,10 +23,14 @@ import { ApprovalStepType, DocumentStatus } from 'src/common/enums/approval.enum
 import type { ApprovalStepSnapshotItemDto } from '../dtos/approval-step-snapshot.dto';
 import { CreateCommentDto, UpdateCommentDto } from '../dtos/comment.dto';
 import { withTransaction } from 'src/common/utils/transaction.util';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { ApproverMappingService } from 'src/modules/context/template/approver-mapping.service';
 import { DocumentPolicyValidator, DrafterAction } from 'src/common/utils/document-policy.validator';
 import { getDocumentActionButtons } from 'src/common/utils/document-action-buttons.util';
+import { MailService } from '../../../integrations/notification/mail.service';
+import { PORTAL_HOME_URL } from '../../../integrations/notification/notification.constants';
+import { DomainEmployeeService } from '../../../domain/employee/employee.service';
+import { submitApprovalLineMailHtml을생성한다 } from '../utils/submit-approval-line-mail.template';
 
 /**
  * 문서 비즈니스 서비스
@@ -47,6 +51,8 @@ export class DocumentService {
         private readonly documentNotificationService: DocumentNotificationService,
         private readonly commentNotificationService: CommentNotificationService,
         private readonly commentContext: CommentContext,
+        private readonly mailService: MailService,
+        private readonly employeeService: DomainEmployeeService,
     ) {}
 
     /**
@@ -190,10 +196,8 @@ export class DocumentService {
             submittedDocument.drafterId,
         );
 
-        // 3) 알림 전송 (비동기, 실패해도 전체 프로세스에 영향 없음)
-        this.sendSubmitNotification(submittedDocument.id, submittedDocument.drafterId).catch((error) => {
-            this.logger.error('문서 기안 알림 전송 실패', error);
-        });
+        // 3) 알림 후 결재선 메일 (비동기, 실패해도 전체 프로세스에 영향 없음)
+        this.기안후알림및메일을비동기로처리한다(submittedDocument.id, submittedDocument.drafterId);
 
         this.logger.log(`문서 기안 및 자동 승인 처리 완료: ${submittedDocument.id}`);
         return submittedDocument;
@@ -237,10 +241,8 @@ export class DocumentService {
             submittedDocument.drafterId,
         );
 
-        // 3) 알림 전송 (비동기, 실패해도 전체 프로세스에 영향 없음)
-        this.sendSubmitNotification(submittedDocument.id, submittedDocument.drafterId).catch((error) => {
-            this.logger.error('바로 기안 알림 전송 실패', error);
-        });
+        // 3) 알림 후 결재선 메일 (비동기, 실패해도 전체 프로세스에 영향 없음)
+        this.기안후알림및메일을비동기로처리한다(submittedDocument.id, submittedDocument.drafterId);
 
         this.logger.log(`바로 기안 및 자동 승인 처리 완료: ${submittedDocument.id}`);
         return submittedDocument;
@@ -281,11 +283,9 @@ export class DocumentService {
         const submittedList = await withTransaction(this.dataSource, async (queryRunner) => {
             const list: Awaited<ReturnType<DocumentContext['submitDocument']>>[] = [];
             for (const agreementStep of agreementSteps) {
-                const line: ApprovalStepSnapshotItemDto[] = [
-                    ...beforeAgreement,
-                    agreementStep,
-                    ...afterAgreement,
-                ].map((s, idx) => ({ ...s, stepOrder: idx + 1 }));
+                const line: ApprovalStepSnapshotItemDto[] = [...beforeAgreement, agreementStep, ...afterAgreement].map(
+                    (s, idx) => ({ ...s, stepOrder: idx + 1 }),
+                );
 
                 const createDto: ContextCreateDocumentDto = {
                     drafterId,
@@ -311,17 +311,74 @@ export class DocumentService {
 
         // 2) 트랜잭션 성공 후 자동 승인 및 알림 전송
         for (const submitted of submittedList) {
-            await this.approvalProcessContext.autoApproveIfDrafterIsFirstApprover(
-                submitted.id,
-                submitted.drafterId,
-            );
-            this.sendSubmitNotification(submitted.id, submitted.drafterId).catch((err) => {
-                this.logger.error('합의자별 바로 기안 알림 전송 실패', err);
-            });
+            await this.approvalProcessContext.autoApproveIfDrafterIsFirstApprover(submitted.id, submitted.drafterId);
+            this.기안후알림및메일을비동기로처리한다(submitted.id, submitted.drafterId);
         }
 
         this.logger.log(`합의자별 바로 기안 완료: ${submittedList.length}건`);
         return submittedList as DocumentResponseDto[];
+    }
+
+    /**
+     * 기안 직후 푸시(알림) 전송이 끝난 뒤, 결재선 직원에게 메일을 보낸다.
+     * HTTP 응답과 무관하게 비동기 실행되며, 각 단계 실패는 로그만 남긴다.
+     */
+    private 기안후알림및메일을비동기로처리한다(documentId: string, drafterId: string): void {
+        void (async () => {
+            try {
+                await this.sendSubmitNotification(documentId, drafterId);
+            } catch (error) {
+                this.logger.error(`문서 기안 알림 전송 실패: ${documentId}`, error);
+            }
+            try {
+                await this.sendSubmitEmailsToApprovalLine(documentId);
+            } catch (error) {
+                this.logger.error(`문서 기안 결재선 메일 전송 실패: ${documentId}`, error);
+            }
+        })();
+    }
+
+    /**
+     * 결재선(모든 스냅샷 단계)의 결재자·참조 등 approverId에 해당하는 직원 이메일로 상신 안내 메일을 보낸다.
+     */
+    private async sendSubmitEmailsToApprovalLine(documentId: string): Promise<void> {
+        const document = await this.documentQueryService.getDocument(documentId);
+        const allSteps = await this.approvalProcessContext.getApprovalStepsByDocumentId(documentId);
+        const approverIds = [...new Set(allSteps.map((s) => s.approverId).filter(Boolean))];
+        if (approverIds.length === 0) {
+            this.logger.debug(`결재선 메일 생략 (결재자 없음): ${documentId}`);
+            return;
+        }
+
+        const employees = await this.employeeService.findAll({
+            where: { id: In(approverIds) },
+        });
+        const recipients = [
+            ...new Set(
+                employees.map((e) => e.email?.trim()).filter((email): email is string => Boolean(email?.includes('@'))),
+            ),
+        ];
+        if (recipients.length === 0) {
+            this.logger.warn(`결재선 메일 생략 (유효한 수신 이메일 없음): ${documentId}`);
+            return;
+        }
+
+        const drafterName = document.drafter?.name ?? '기안자';
+        const subject = `[결재 요청] ${document.title}`;
+        const html = await submitApprovalLineMailHtml을생성한다({
+            escapeHtml: (plain) => this.메일용Html이스케이프한다(plain),
+            drafterName,
+            documentTitle: document.title,
+            documentId,
+            portalHomeUrl: PORTAL_HOME_URL,
+        });
+
+        await this.mailService.sendMultiple({ recipients, subject, html });
+        this.logger.log(`문서 기안 결재선 메일 전송 완료: ${documentId}, 수신 ${recipients.length}명`);
+    }
+
+    private 메일용Html이스케이프한다(text: string): string {
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     /**

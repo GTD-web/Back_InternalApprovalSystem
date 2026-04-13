@@ -42,6 +42,9 @@ export class EmployeeDepartmentPosition {
     @Column({ comment: '관리자 권한 여부', type: 'boolean', default: false })
     isManager: boolean;
 
+    @Column({ comment: '현재 유효(사용 중) 부서 배치 여부', type: 'boolean', default: true })
+    isCurrent: boolean;
+
     @CreateDateColumn({ comment: '생성일' })
     createdAt: Date;
 

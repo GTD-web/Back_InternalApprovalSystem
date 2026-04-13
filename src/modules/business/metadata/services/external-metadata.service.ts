@@ -1,44 +1,35 @@
-import { Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ExportAllDataRequest, ExportAllDataResponse, SSOClient } from '@lumir-company/sso-sdk';
+import { SSO_CLIENT } from '../../../integrations/sso/sso.constants';
 
 /**
  * ExternalMetadataService
- * 외부 SSO API로부터 메타데이터를 가져오는 서비스
+ * SSO SDK를 통해 조직 메타데이터(export/all)를 가져옵니다.
  */
 @Injectable()
 export class ExternalMetadataService {
     private readonly logger = new Logger(ExternalMetadataService.name);
-    private readonly ssoApiUrl: string;
 
-    constructor() {
-        this.ssoApiUrl = process.env.SSO_API_URL || '';
-        if (!this.ssoApiUrl) {
-            this.logger.warn('SSO_API_URL 환경변수가 설정되지 않았습니다.');
-        }
-    }
+    constructor(@Inject(SSO_CLIENT) private readonly ssoClient: SSOClient) {}
 
     /**
-     * 외부 API에서 전체 조직 메타데이터를 가져옵니다.
+     * SSO Organization API에서 전체 조직 메타데이터를 가져옵니다.
      */
-    async fetchAllMetadata(): Promise<any> {
-        this.logger.log('외부 API에서 메타데이터 조회 시작');
+    async fetchAllMetadata(params?: ExportAllDataRequest): Promise<ExportAllDataResponse> {
+        this.logger.log('외부 SSO SDK로 메타데이터 조회 시작');
 
         try {
-            const url = `${this.ssoApiUrl}/api/organization/export/all`;
-            this.logger.debug(`API 호출: ${url}`);
-
-            const response = await axios.get(url, {
-                timeout: 30000, // 30초 타임아웃
-            });
-
+            const data = await this.ssoClient.organization.exportAllData(params);
+            console.log(data);
             this.logger.log(
-                `메타데이터 조회 완료: ${response.data.totalCounts?.departments || 0}개 부서, ${response.data.totalCounts?.employees || 0}명 직원`,
+                `메타데이터 조회 완료: ${data.totalCounts.departments}개 부서, ${data.totalCounts.employees}명 직원`,
             );
 
-            return response.data;
+            return data;
         } catch (error) {
-            this.logger.error('외부 API에서 메타데이터 조회 실패', error);
-            throw new Error(`메타데이터 조회 실패: ${error.message}`);
+            this.logger.error('외부 SSO에서 메타데이터 조회 실패', error);
+            const message = error instanceof Error ? error.message : String(error);
+            throw new Error(`메타데이터 조회 실패: ${message}`);
         }
     }
 }
