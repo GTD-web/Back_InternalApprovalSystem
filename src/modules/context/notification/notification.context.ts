@@ -144,7 +144,7 @@ export class NotificationContext {
             // 4) FCM 토큰 추출
             const employeeTokens = fcmResponse;
             const prodTokens = employeeTokens.tokens
-                .filter((token) => token.deviceType === 'prod')
+                .filter((token) => token.deviceType.includes('portal'))
                 .map((token) => token.fcmToken);
 
             // 5) 알림 전송 요청 DTO 생성
