@@ -29,7 +29,9 @@ export class MetadataContext {
      */
     async getAllDepartments() {
         this.logger.debug('모든 부서 조회');
-        return await this.departmentService.findAll({ where: { departmentCode: Not('퇴사자') } });
+        return await this.departmentService.findAll({
+            where: { departmentCode: Not('퇴사자'), isCurrent: true },
+        });
     }
 
     /**
@@ -39,14 +41,16 @@ export class MetadataContext {
         this.logger.debug(`부서별 직원 조회: ${departmentId}, activeOnly: ${activeOnly}`);
 
         // 부서 존재 여부 확인
-        const department = await this.departmentService.findOne({ where: { id: departmentId } });
+        const department = await this.departmentService.findOne({
+            where: { id: departmentId, isCurrent: true },
+        });
         if (!department) {
             throw new NotFoundException(`ID가 ${departmentId}인 부서를 찾을 수 없습니다`);
         }
 
         // 해당 부서의 EmployeeDepartmentPosition 레코드 조회
         const edps = await this.employeeDepartmentPositionService.findAll({
-            where: { departmentId },
+            where: { departmentId, isCurrent: true },
             relations: ['employee', 'department', 'position'],
         });
 
@@ -55,6 +59,7 @@ export class MetadataContext {
 
         for (const edp of edps) {
             if (!edp.employee) continue;
+            if (!edp.department?.isCurrent) continue;
 
             // 재직 중인 직원만 필터링
             if (activeOnly && edp.employee.status !== EmployeeStatus.Active) continue;
@@ -111,7 +116,16 @@ export class MetadataContext {
         this.logger.debug(`직원 검색: search=${search}, departmentId=${departmentId}`);
 
         // EmployeeDepartmentPosition 레코드 조회 (relations 포함)
-        const whereCondition: any = {};
+        if (departmentId) {
+            const dept = await this.departmentService.findOne({
+                where: { id: departmentId, isCurrent: true },
+            });
+            if (!dept) {
+                return [];
+            }
+        }
+
+        const whereCondition: Record<string, unknown> = { isCurrent: true };
         if (departmentId) {
             whereCondition.departmentId = departmentId;
         }
@@ -126,6 +140,7 @@ export class MetadataContext {
 
         for (const edp of edps) {
             if (!edp.employee) continue;
+            if (!edp.department?.isCurrent) continue;
 
             // 검색어 필터링
             if (search) {
@@ -188,7 +203,7 @@ export class MetadataContext {
 
         // 해당 직원의 EmployeeDepartmentPosition 레코드 조회
         const edps = await this.employeeDepartmentPositionService.findAll({
-            where: { employeeId },
+            where: { employeeId, isCurrent: true },
             relations: ['department', 'position'],
         });
 
@@ -201,22 +216,24 @@ export class MetadataContext {
             phoneNumber: employee.phoneNumber,
             status: employee.status,
             hireDate: employee.hireDate,
-            departments: edps.map((edp) => ({
-                department: {
-                    id: edp.department?.id,
-                    departmentCode: edp.department?.departmentCode,
-                    departmentName: edp.department?.departmentName,
-                },
-                position: edp.position
-                    ? {
-                          id: edp.position.id,
-                          positionCode: edp.position.positionCode,
-                          positionTitle: edp.position.positionTitle,
-                          level: edp.position.level,
-                          hasManagementAuthority: edp.position.hasManagementAuthority,
-                      }
-                    : null,
-            })),
+            departments: edps
+                .filter((edp) => edp.department?.isCurrent)
+                .map((edp) => ({
+                    department: {
+                        id: edp.department?.id,
+                        departmentCode: edp.department?.departmentCode,
+                        departmentName: edp.department?.departmentName,
+                    },
+                    position: edp.position
+                        ? {
+                              id: edp.position.id,
+                              positionCode: edp.position.positionCode,
+                              positionTitle: edp.position.positionTitle,
+                              level: edp.position.level,
+                              hasManagementAuthority: edp.position.hasManagementAuthority,
+                          }
+                        : null,
+                })),
         };
     }
 
@@ -228,20 +245,24 @@ export class MetadataContext {
 
         // 모든 부서 조회
         const allDepartments = await this.departmentService.findAll({
-            where: { departmentCode: Not('퇴사자') },
+            where: { departmentCode: Not('퇴사자'), isCurrent: true },
             order: { order: 'ASC' },
         });
 
         // 모든 EmployeeDepartmentPosition 조회
         const allEdps = await this.employeeDepartmentPositionService.findAll({
+            where: { isCurrent: true },
             relations: ['employee', 'department', 'position'],
         });
 
         // 부서별 직원 맵 생성
         const departmentEmployeesMap = new Map<string, any[]>();
 
+        const currentDepartmentIds = new Set(allDepartments.map((d) => d.id));
+
         for (const edp of allEdps) {
             if (!edp.employee || !edp.departmentId) continue;
+            if (!currentDepartmentIds.has(edp.departmentId)) continue;
 
             // 재직 중인 직원만 필터링
             if (activeOnly && edp.employee.status !== EmployeeStatus.Active) continue;

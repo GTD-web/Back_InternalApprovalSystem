@@ -17,3 +17,7 @@ export const MAIL_SERVICE_URL = NOTIFICATION_SERVICE_URL;
 export const MAIL_ENDPOINTS = {
     SEND_MULTIPLE: '/mail/send-multiple',
 } as const;
+
+/** 결재 알림 메일 등에서 안내하는 포털 홈(결재함) URL */
+export const PORTAL_HOME_URL =
+    process.env.PORTAL_HOME_URL?.trim() || 'https://portal.lumir.space/current/home';

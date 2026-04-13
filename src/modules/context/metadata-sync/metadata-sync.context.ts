@@ -1,9 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { IsNull } from 'typeorm';
+import { DepartmentType } from '../../../common/enums/department.enum';
+import { EmployeeStatus, Gender } from '../../../common/enums/employee.enum';
 import { DomainPositionService } from '../../domain/position/position.service';
 import { DomainRankService } from '../../domain/rank/rank.service';
 import { DomainDepartmentService } from '../../domain/department/department.service';
 import { DomainEmployeeService } from '../../domain/employee/employee.service';
 import { DomainEmployeeDepartmentPositionService } from '../../domain/employee-department-position/employee-department-position.service';
+import type {
+    MetadataSyncAllInput,
+    MetadataSyncDepartmentInput,
+    MetadataSyncEmployeeDepartmentPositionInput,
+    MetadataSyncEmployeeInput,
+    MetadataSyncPositionInput,
+    MetadataSyncRankInput,
+} from './metadata-sync.types';
 
 /**
  * MetadataSyncContext
@@ -14,6 +25,12 @@ import { DomainEmployeeDepartmentPositionService } from '../../domain/employee-d
 export class MetadataSyncContext {
     private readonly logger = new Logger(MetadataSyncContext.name);
 
+    /** 동기화 시 실제 order와 겹치지 않는 임시 order 구간 (UQ 충돌 회피) */
+    private readonly departmentOrderTempBase = 9_000_000;
+
+    /** `parentDepartmentId === null` 인 루트 부서 그룹을 Set 키로 쓰기 위한 값 */
+    private readonly departmentRootParentKey = '__ROOT__';
+
     constructor(
         private readonly positionService: DomainPositionService,
         private readonly rankService: DomainRankService,
@@ -22,10 +39,17 @@ export class MetadataSyncContext {
         private readonly employeeDepartmentPositionService: DomainEmployeeDepartmentPositionService,
     ) {}
 
+    /** 동기화 페이로드의 isCurrent(또는 동일 의미 필드)를 boolean으로 해석한다. 미전달 시 기존값 또는 true */
+    private 동기화페이로드에서IsCurrent해석한다(payload: unknown, 기존값: boolean | undefined): boolean {
+        if (payload === true) return true;
+        if (payload === false) return false;
+        return 기존값 ?? true;
+    }
+
     /**
      * 직책(Position) 동기화
      */
-    async syncPositions(positions: any[]): Promise<void> {
+    async syncPositions(positions: MetadataSyncPositionInput[]): Promise<void> {
         this.logger.log(`Position 동기화 시작 (${positions.length}개)`);
 
         for (const position of positions) {
@@ -64,7 +88,7 @@ export class MetadataSyncContext {
     /**
      * 직급(Rank) 동기화
      */
-    async syncRanks(ranks: any[]): Promise<void> {
+    async syncRanks(ranks: MetadataSyncRankInput[]): Promise<void> {
         this.logger.log(`Rank 동기화 시작 (${ranks.length}개)`);
 
         for (const rank of ranks) {
@@ -99,10 +123,32 @@ export class MetadataSyncContext {
     }
 
     /**
+     * 동일 부모 아래 (parentDepartmentId, order) 유니크 제약 때문에,
+     * 순서/부모 변경 시 중간 상태에서 duplicate key가 날 수 있다.
+     * 해당 부모(및 이전 부모)에 속한 모든 행의 order를 임시 고유값으로 옮긴다.
+     */
+    private async 부모별부서Order충돌회피용임시할당한다(parentKeys: Set<string>): Promise<void> {
+        for (const key of parentKeys) {
+            const where =
+                key === this.departmentRootParentKey
+                    ? { parentDepartmentId: IsNull() }
+                    : { parentDepartmentId: key };
+
+            const siblings = await this.departmentService.findAll({ where });
+            siblings.sort((a, b) => a.id.localeCompare(b.id));
+            for (let i = 0; i < siblings.length; i++) {
+                const row = siblings[i];
+                row.order = this.departmentOrderTempBase + i;
+                await this.departmentService.save(row);
+            }
+        }
+    }
+
+    /**
      * 부서(Department) 동기화
      * 부모-자식 관계가 있으므로 순서대로 처리
      */
-    async syncDepartments(departments: any[]): Promise<void> {
+    async syncDepartments(departments: MetadataSyncDepartmentInput[]): Promise<void> {
         this.logger.log(`Department 동기화 시작 (${departments.length}개)`);
 
         // 부모-자식 관계를 고려하여 배치 처리
@@ -112,7 +158,7 @@ export class MetadataSyncContext {
 
         // 모든 부서가 처리될 때까지 반복
         while (remainingDepartments.length > 0) {
-            const currentBatch: any[] = [];
+            const currentBatch: MetadataSyncDepartmentInput[] = [];
 
             // 부모가 없거나, 부모가 이미 처리된 부서들을 현재 배치에 추가
             for (const department of remainingDepartments) {
@@ -136,18 +182,36 @@ export class MetadataSyncContext {
                 );
             }
 
+            const 부모키수집한다 = new Set<string>();
+            const 배치내기존부서조회한다 = new Map<string, Awaited<ReturnType<DomainDepartmentService['findOne']>>>();
+            for (const department of currentBatch) {
+                const existingRow = await this.departmentService.findOne({ where: { id: department.id } });
+                배치내기존부서조회한다.set(department.id, existingRow);
+                부모키수집한다.add(department.parentDepartmentId ?? this.departmentRootParentKey);
+                if (existingRow) {
+                    부모키수집한다.add(
+                        existingRow.parentDepartmentId ?? this.departmentRootParentKey,
+                    );
+                }
+            }
+            await this.부모별부서Order충돌회피용임시할당한다(부모키수집한다);
+
             // 현재 배치 처리
             for (const department of currentBatch) {
                 try {
-                    const existing = await this.departmentService.findOne({ where: { id: department.id } });
+                    const existing = 배치내기존부서조회한다.get(department.id) ?? null;
 
                     if (existing) {
                         // 업데이트
                         existing.departmentName = department.departmentName;
                         existing.departmentCode = department.departmentCode;
-                        existing.type = department.type;
-                        existing.parentDepartmentId = department.parentDepartmentId;
+                        existing.type = department.type as DepartmentType;
+                        existing.parentDepartmentId = department.parentDepartmentId ?? undefined;
                         existing.order = department.order;
+                        existing.isCurrent = this.동기화페이로드에서IsCurrent해석한다(
+                            department.isCurrent,
+                            existing.isCurrent,
+                        );
                         await this.departmentService.save(existing);
                         this.logger.debug(`Department 업데이트: ${department.departmentName}`);
                     } else {
@@ -156,9 +220,10 @@ export class MetadataSyncContext {
                             id: department.id,
                             departmentName: department.departmentName,
                             departmentCode: department.departmentCode,
-                            type: department.type,
-                            parentDepartmentId: department.parentDepartmentId,
+                            type: department.type as DepartmentType,
+                            parentDepartmentId: department.parentDepartmentId ?? undefined,
                             order: department.order,
+                            isCurrent: this.동기화페이로드에서IsCurrent해석한다(department.isCurrent, undefined),
                         });
                         await this.departmentService.save(newDepartment);
                         this.logger.debug(`Department 생성: ${department.departmentName}`);
@@ -184,28 +249,29 @@ export class MetadataSyncContext {
     /**
      * 직원(Employee) 동기화
      */
-    async syncEmployees(employees: any[]): Promise<void> {
+    async syncEmployees(employees: MetadataSyncEmployeeInput[]): Promise<void> {
         this.logger.log(`Employee 동기화 시작 (${employees.length}개)`);
 
         for (const employee of employees) {
-            console.log(employee);
-
             try {
                 const existing = await this.employeeService.findOne({ where: { id: employee.id } });
-                console.log('existing', existing);
                 if (existing) {
                     // 업데이트
                     existing.employeeNumber = employee.employeeNumber;
                     existing.name = employee.name;
                     existing.email = employee.email;
-                    existing.password = employee.password;
+                    existing.password = employee.password ?? undefined;
                     existing.phoneNumber = employee.phoneNumber;
-                    existing.dateOfBirth = employee.dateOfBirth;
-                    existing.gender = employee.gender;
-                    existing.hireDate = employee.hireDate;
-                    existing.status = employee.status;
+                    existing.dateOfBirth = employee.dateOfBirth
+                        ? new Date(employee.dateOfBirth)
+                        : undefined;
+                    existing.gender = employee.gender as Gender | undefined;
+                    existing.hireDate = new Date(employee.hireDate);
+                    existing.status = employee.status as EmployeeStatus;
                     existing.currentRankId = employee.currentRankId;
-                    existing.terminationDate = employee.terminationDate;
+                    existing.terminationDate = employee.terminationDate
+                        ? new Date(employee.terminationDate)
+                        : undefined;
                     existing.terminationReason = employee.terminationReason;
                     existing.isInitialPasswordSet = employee.isInitialPasswordSet;
                     await this.employeeService.save(existing);
@@ -218,19 +284,22 @@ export class MetadataSyncContext {
                         employeeNumber: employee.employeeNumber,
                         name: employee.name,
                         email: employee.email,
-                        password: employee.password,
+                        password: employee.password ?? undefined,
                         phoneNumber: employee.phoneNumber,
-                        dateOfBirth: employee.dateOfBirth,
-                        gender: employee.gender,
-                        hireDate: employee.hireDate,
-                        status: employee.status,
+                        dateOfBirth: employee.dateOfBirth
+                            ? new Date(employee.dateOfBirth)
+                            : undefined,
+                        gender: employee.gender as Gender | undefined,
+                        hireDate: new Date(employee.hireDate),
+                        status: employee.status as EmployeeStatus,
                         currentRankId: employee.currentRankId,
-                        terminationDate: employee.terminationDate,
+                        terminationDate: employee.terminationDate
+                            ? new Date(employee.terminationDate)
+                            : undefined,
                         terminationReason: employee.terminationReason,
                         isInitialPasswordSet: employee.isInitialPasswordSet,
                         roles: employee.roles || [],
                     });
-                    console.log(newEmployee);
                     await this.employeeService.save(newEmployee);
                     this.logger.debug(`Employee 생성: ${employee.name} (${employee.employeeNumber})`);
                 }
@@ -246,7 +315,9 @@ export class MetadataSyncContext {
     /**
      * 직원-부서-직책(EmployeeDepartmentPosition) 동기화
      */
-    async syncEmployeeDepartmentPositions(employeeDepartmentPositions: any[]): Promise<void> {
+    async syncEmployeeDepartmentPositions(
+        employeeDepartmentPositions: MetadataSyncEmployeeDepartmentPositionInput[],
+    ): Promise<void> {
         this.logger.log(`EmployeeDepartmentPosition 동기화 시작 (${employeeDepartmentPositions.length}개)`);
 
         for (const edp of employeeDepartmentPositions) {
@@ -259,6 +330,7 @@ export class MetadataSyncContext {
                     existing.departmentId = edp.departmentId;
                     existing.positionId = edp.positionId;
                     existing.isManager = edp.isManager;
+                    existing.isCurrent = this.동기화페이로드에서IsCurrent해석한다(edp.isCurrent, existing.isCurrent);
                     await this.employeeDepartmentPositionService.save(existing);
                     this.logger.debug(`EmployeeDepartmentPosition 업데이트: ${edp.id}`);
                 } else {
@@ -269,6 +341,7 @@ export class MetadataSyncContext {
                         departmentId: edp.departmentId,
                         positionId: edp.positionId,
                         isManager: edp.isManager,
+                        isCurrent: this.동기화페이로드에서IsCurrent해석한다(edp.isCurrent, undefined),
                     });
                     await this.employeeDepartmentPositionService.save(newEdp);
                     this.logger.debug(`EmployeeDepartmentPosition 생성: ${edp.id}`);
@@ -376,13 +449,7 @@ export class MetadataSyncContext {
     /**
      * 모든 메타데이터 동기화 (순서 보장)
      */
-    async syncAllMetadata(data: {
-        positions: any[];
-        ranks: any[];
-        departments: any[];
-        employees: any[];
-        employeeDepartmentPositions: any[];
-    }): Promise<void> {
+    async syncAllMetadata(data: MetadataSyncAllInput): Promise<void> {
         this.logger.log('전체 메타데이터 동기화 시작');
 
         try {

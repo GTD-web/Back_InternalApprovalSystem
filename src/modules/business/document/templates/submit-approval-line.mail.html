@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>결재 요청 알림</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f8;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f6f8;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(15,23,42,0.08);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:28px 24px;text-align:center;">
+              <p style="margin:0 0 8px 0;font-size:13px;letter-spacing:0.12em;color:rgba(255,255,255,0.85);text-transform:uppercase;">Lumir 결재</p>
+              <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;line-height:1.35;">새 문서가 상신되었습니다</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 24px 8px 24px;">
+              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#334155;">
+                안녕하세요.<br />
+                아래 문서에 대한 <strong style="color:#0f172a;">결재 또는 검토</strong>가 요청되었습니다.
+              </p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e2e8f0;border-radius:8px;background-color:#f8fafc;margin-bottom:20px;">
+                <tr>
+                  <td style="padding:16px 18px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:14px;color:#475569;">
+                      <tr>
+                        <td style="padding:6px 0;width:100px;color:#64748b;vertical-align:top;">기안자</td>
+                        <td style="padding:6px 0;font-weight:600;color:#0f172a;">__DRAFTER_NAME__</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#64748b;vertical-align:top;">문서 제목</td>
+                        <td style="padding:6px 0;font-weight:600;color:#0f172a;line-height:1.5;">__DOCUMENT_TITLE__</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;color:#64748b;vertical-align:top;">문서 ID</td>
+                        <td style="padding:6px 0;font-family:ui-monospace,monospace;font-size:13px;color:#334155;">__DOCUMENT_ID__</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 20px 0;font-size:14px;line-height:1.6;color:#64748b;">
+                포털에서 결재함을 열어 문서를 확인해 주세요.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto 24px auto;">
+                <tr>
+                  <td style="border-radius:8px;background-color:#2563eb;">
+                    <a href="__PORTAL_URL__" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">포털에서 결재함 열기</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#94a3b8;">
+                버튼이 동작하지 않으면 아래 주소를 브라우저에 복사해 접속해 주세요.<br />
+                <a href="__PORTAL_URL__" style="color:#2563eb;word-break:break-all;">__PORTAL_URL__</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 24px 24px 24px;border-top:1px solid #f1f5f9;">
+              <p style="margin:0;font-size:11px;line-height:1.5;color:#cbd5e1;text-align:center;">
+                본 메일은 시스템에서 자동 발송되었습니다.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -43,6 +43,9 @@ export class Department {
     @Column({ comment: '정렬 순서', default: 0 })
     order: number;
 
+    @Column({ comment: '현재 유효(사용 중) 부서 여부', type: 'boolean', default: true })
+    isCurrent: boolean;
+
     // 부서 계층 구조
     @ManyToOne(() => Department, (department) => department.childDepartments, { nullable: true })
     @JoinColumn({ name: 'parentDepartmentId' })
