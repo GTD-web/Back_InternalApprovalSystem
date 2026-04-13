@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { NotificationService } from './notification.service';
+import { MailService } from './mail.service';
 
 @Module({
     imports: [
@@ -9,7 +10,7 @@ import { NotificationService } from './notification.service';
             maxRedirects: 5,
         }),
     ],
-    providers: [NotificationService],
-    exports: [NotificationService],
+    providers: [NotificationService, MailService],
+    exports: [NotificationService, MailService],
 })
 export class NotificationModule {}
