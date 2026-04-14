@@ -31,6 +31,7 @@ import { MailService } from '../../../integrations/notification/mail.service';
 import { PORTAL_HOME_URL } from '../../../integrations/notification/notification.constants';
 import { DomainEmployeeService } from '../../../domain/employee/employee.service';
 import { submitApprovalLineMailHtml을생성한다 } from '../utils/submit-approval-line-mail.template';
+import { MultipleMailResponseDto } from '../../../integrations/notification/dtos/mail.dto';
 
 /**
  * 문서 비즈니스 서비스
@@ -341,13 +342,17 @@ export class DocumentService {
     /**
      * 결재선(모든 스냅샷 단계)의 결재자·참조 등 approverId에 해당하는 직원 이메일로 상신 안내 메일을 보낸다.
      */
-    private async sendSubmitEmailsToApprovalLine(documentId: string): Promise<void> {
+    private async sendSubmitEmailsToApprovalLine(documentId: string): Promise<MultipleMailResponseDto> {
         const document = await this.documentQueryService.getDocument(documentId);
         const allSteps = await this.approvalProcessContext.getApprovalStepsByDocumentId(documentId);
         const approverIds = [...new Set(allSteps.map((s) => s.approverId).filter(Boolean))];
         if (approverIds.length === 0) {
             this.logger.debug(`결재선 메일 생략 (결재자 없음): ${documentId}`);
-            return;
+            return {
+                success: true,
+                message: '메일 전송 생략 (결재자 없음)',
+                recipientCount: 0,
+            };
         }
 
         const employees = await this.employeeService.findAll({
@@ -360,7 +365,11 @@ export class DocumentService {
         ];
         if (recipients.length === 0) {
             this.logger.warn(`결재선 메일 생략 (유효한 수신 이메일 없음): ${documentId}`);
-            return;
+            return {
+                success: true,
+                message: '메일 전송 생략 (유효한 수신 이메일 없음)',
+                recipientCount: 0,
+            };
         }
 
         const drafterName = document.drafter?.name ?? '기안자';
@@ -373,12 +382,21 @@ export class DocumentService {
             portalHomeUrl: PORTAL_HOME_URL,
         });
 
-        await this.mailService.sendMultiple({ recipients, subject, html });
+        const result = await this.mailService.sendMultiple({ recipients, subject, html });
         this.logger.log(`문서 기안 결재선 메일 전송 완료: ${documentId}, 수신 ${recipients.length}명`);
+        return result;
     }
 
     private 메일용Html이스케이프한다(text: string): string {
         return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /**
+     * 결재선 메일 재전송 (관리자 기능)
+     * - 인증/권한은 컨트롤러 레벨에서 별도 처리하지 않음 (요청에 따라 제거)
+     */
+    async 결재선메일을재전송한다(documentId: string): Promise<MultipleMailResponseDto> {
+        return await this.sendSubmitEmailsToApprovalLine(documentId);
     }
 
     /**

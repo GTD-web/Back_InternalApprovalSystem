@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DocumentController } from './controllers/document.controller';
+import { DocumentAdminController } from './controllers/document-admin.controller';
 import { DocumentPublicController } from './controllers/document-public.controller';
 import { DocumentService } from './services/document.service';
 import { DocumentModule as DocumentContextModule } from '../../context/document/document.module';
@@ -41,7 +42,7 @@ import { Category } from '../../domain/category/category.entity';
             Category,
         ]),
     ],
-    controllers: [DocumentController, DocumentPublicController],
+    controllers: [DocumentController, DocumentAdminController, DocumentPublicController],
     providers: [DocumentService],
 })
 export class DocumentBusinessModule {}

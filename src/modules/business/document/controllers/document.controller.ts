@@ -670,183 +670,183 @@ export class DocumentController {
 
     // ==================== 테스트 데이터 생성 API ====================
 
-    @Delete('test/all')
-    @HttpCode(HttpStatus.OK)
-    @ApiOperation({
-        summary: '🧪 전체 데이터 삭제 및 초기화 (개발용)',
-        description:
-            '⚠️ **주의: 모든 문서, 템플릿, 카테고리 데이터가 삭제됩니다!**\n\n' +
-            '개발/테스트 환경에서 데이터를 초기화할 때 사용합니다.\n\n' +
-            '**삭제되는 데이터:**\n' +
-            '- 모든 결재 단계 스냅샷 (approval_step_snapshots)\n' +
-            '- 모든 코멘트 (comments)\n' +
-            '- 모든 문서 리비전 (document_revisions)\n' +
-            '- 모든 문서 (documents)\n' +
-            '- 모든 결재 단계 템플릿 (approval_step_templates)\n' +
-            '- 모든 문서 템플릿 (document_templates)\n' +
-            '- 모든 카테고리 (categories)\n\n' +
-            '**생성되는 기본 카테고리:**\n' +
-            '- 기안문서 (DRAFT)\n' +
-            '- 지출결의서 (EXPENSE)\n' +
-            '- 신청서 (APPLICATION)\n' +
-            '- 보고서 (REPORT)\n' +
-            '- 공문 (OFFICIAL)\n' +
-            '- 인사문서 (HR)\n' +
-            '- 회계 (ACCOUNTING)\n\n' +
-            '**⚠️ 이 작업은 되돌릴 수 없습니다!**',
-    })
-    @ApiResponse({
-        status: 200,
-        description: '전체 데이터 삭제 및 초기화 성공',
-        schema: {
-            type: 'object',
-            properties: {
-                deletedApprovalStepSnapshots: { type: 'number', description: '삭제된 결재 단계 스냅샷 수' },
-                deletedComments: { type: 'number', description: '삭제된 코멘트 수' },
-                deletedDocumentRevisions: { type: 'number', description: '삭제된 문서 리비전 수' },
-                deletedDocuments: { type: 'number', description: '삭제된 문서 수' },
-                deletedApprovalStepTemplates: { type: 'number', description: '삭제된 결재 단계 템플릿 수' },
-                deletedDocumentTemplates: { type: 'number', description: '삭제된 문서 템플릿 수' },
-                deletedCategories: { type: 'number', description: '삭제된 카테고리 수' },
-                createdCategories: { type: 'number', description: '생성된 기본 카테고리 수' },
-                categories: {
-                    type: 'array',
-                    description: '생성된 카테고리 목록',
-                    items: {
-                        type: 'object',
-                        properties: {
-                            name: { type: 'string', description: '카테고리 이름' },
-                            code: { type: 'string', description: '카테고리 코드' },
-                        },
-                    },
-                },
-                message: { type: 'string', description: '결과 메시지' },
-            },
-        },
-    })
-    @ApiResponse({
-        status: 401,
-        description: '인증 실패',
-    })
-    async deleteAllDocuments() {
-        return await this.documentService.deleteAllDocuments();
-    }
+    // @Delete('test/all')
+    // @HttpCode(HttpStatus.OK)
+    // @ApiOperation({
+    //     summary: '🧪 전체 데이터 삭제 및 초기화 (개발용)',
+    //     description:
+    //         '⚠️ **주의: 모든 문서, 템플릿, 카테고리 데이터가 삭제됩니다!**\n\n' +
+    //         '개발/테스트 환경에서 데이터를 초기화할 때 사용합니다.\n\n' +
+    //         '**삭제되는 데이터:**\n' +
+    //         '- 모든 결재 단계 스냅샷 (approval_step_snapshots)\n' +
+    //         '- 모든 코멘트 (comments)\n' +
+    //         '- 모든 문서 리비전 (document_revisions)\n' +
+    //         '- 모든 문서 (documents)\n' +
+    //         '- 모든 결재 단계 템플릿 (approval_step_templates)\n' +
+    //         '- 모든 문서 템플릿 (document_templates)\n' +
+    //         '- 모든 카테고리 (categories)\n\n' +
+    //         '**생성되는 기본 카테고리:**\n' +
+    //         '- 기안문서 (DRAFT)\n' +
+    //         '- 지출결의서 (EXPENSE)\n' +
+    //         '- 신청서 (APPLICATION)\n' +
+    //         '- 보고서 (REPORT)\n' +
+    //         '- 공문 (OFFICIAL)\n' +
+    //         '- 인사문서 (HR)\n' +
+    //         '- 회계 (ACCOUNTING)\n\n' +
+    //         '**⚠️ 이 작업은 되돌릴 수 없습니다!**',
+    // })
+    // @ApiResponse({
+    //     status: 200,
+    //     description: '전체 데이터 삭제 및 초기화 성공',
+    //     schema: {
+    //         type: 'object',
+    //         properties: {
+    //             deletedApprovalStepSnapshots: { type: 'number', description: '삭제된 결재 단계 스냅샷 수' },
+    //             deletedComments: { type: 'number', description: '삭제된 코멘트 수' },
+    //             deletedDocumentRevisions: { type: 'number', description: '삭제된 문서 리비전 수' },
+    //             deletedDocuments: { type: 'number', description: '삭제된 문서 수' },
+    //             deletedApprovalStepTemplates: { type: 'number', description: '삭제된 결재 단계 템플릿 수' },
+    //             deletedDocumentTemplates: { type: 'number', description: '삭제된 문서 템플릿 수' },
+    //             deletedCategories: { type: 'number', description: '삭제된 카테고리 수' },
+    //             createdCategories: { type: 'number', description: '생성된 기본 카테고리 수' },
+    //             categories: {
+    //                 type: 'array',
+    //                 description: '생성된 카테고리 목록',
+    //                 items: {
+    //                     type: 'object',
+    //                     properties: {
+    //                         name: { type: 'string', description: '카테고리 이름' },
+    //                         code: { type: 'string', description: '카테고리 코드' },
+    //                     },
+    //                 },
+    //             },
+    //             message: { type: 'string', description: '결과 메시지' },
+    //         },
+    //     },
+    // })
+    // @ApiResponse({
+    //     status: 401,
+    //     description: '인증 실패',
+    // })
+    // async deleteAllDocuments() {
+    //     return await this.documentService.deleteAllDocuments();
+    // }
 
-    @Get('test/create')
-    @ApiOperation({
-        summary: '🧪 테스트 문서 생성',
-        description:
-            '개발/테스트 환경에서 다양한 상태의 문서를 빠르게 생성합니다.\n\n' +
-            '**⚠️ 주의: 이 API는 테스트 목적으로만 사용해야 합니다.**\n\n' +
-            '**결재 단계별 구분:**\n' +
-            '- 🤝 **합의 (AGREEMENT)**: 합의1, 합의2 (선택)\n' +
-            '- ✅ **결재 (APPROVAL)**: 결재1 (필수), 결재2 (선택)\n' +
-            '- 🚀 **시행 (IMPLEMENTATION)**: 시행 (필수)\n' +
-            '- 📋 **참조 (REFERENCE)**: 참조1, 참조2 (선택)\n\n' +
-            '**사용 가능한 직원:**\n' +
-            '김규현, 김종식, 우창욱, 이화영, 조민경, 박헌남, 유승훈, 민정호\n\n' +
-            '**예시 시나리오:**\n' +
-            '1. 결재 진행중: 결재1(APPROVED) + 시행(PENDING)\n' +
-            '2. 완전 완료: 결재1(APPROVED) + 시행(APPROVED)\n' +
-            '3. 합의 후 결재: 합의1(APPROVED) + 결재1(APPROVED) + 시행(PENDING)',
-    })
-    @ApiResponse({
-        status: 200,
-        description: '테스트 문서 생성 성공',
-        type: CreateTestDocumentResponseDto,
-    })
-    @ApiResponse({
-        status: 400,
-        description: '잘못된 요청',
-    })
-    @ApiResponse({
-        status: 401,
-        description: '인증 실패',
-    })
-    async createTestDocument(@Query() query: CreateTestDocumentQueryDto) {
-        // 이름 -> ID 변환 헬퍼 함수
-        const getEmployeeId = (name: TestEmployeeName): string => TEST_EMPLOYEE_ID_MAP[name];
+    // @Get('test/create')
+    // @ApiOperation({
+    //     summary: '🧪 테스트 문서 생성',
+    //     description:
+    //         '개발/테스트 환경에서 다양한 상태의 문서를 빠르게 생성합니다.\n\n' +
+    //         '**⚠️ 주의: 이 API는 테스트 목적으로만 사용해야 합니다.**\n\n' +
+    //         '**결재 단계별 구분:**\n' +
+    //         '- 🤝 **합의 (AGREEMENT)**: 합의1, 합의2 (선택)\n' +
+    //         '- ✅ **결재 (APPROVAL)**: 결재1 (필수), 결재2 (선택)\n' +
+    //         '- 🚀 **시행 (IMPLEMENTATION)**: 시행 (필수)\n' +
+    //         '- 📋 **참조 (REFERENCE)**: 참조1, 참조2 (선택)\n\n' +
+    //         '**사용 가능한 직원:**\n' +
+    //         '김규현, 김종식, 우창욱, 이화영, 조민경, 박헌남, 유승훈, 민정호\n\n' +
+    //         '**예시 시나리오:**\n' +
+    //         '1. 결재 진행중: 결재1(APPROVED) + 시행(PENDING)\n' +
+    //         '2. 완전 완료: 결재1(APPROVED) + 시행(APPROVED)\n' +
+    //         '3. 합의 후 결재: 합의1(APPROVED) + 결재1(APPROVED) + 시행(PENDING)',
+    // })
+    // @ApiResponse({
+    //     status: 200,
+    //     description: '테스트 문서 생성 성공',
+    //     type: CreateTestDocumentResponseDto,
+    // })
+    // @ApiResponse({
+    //     status: 400,
+    //     description: '잘못된 요청',
+    // })
+    // @ApiResponse({
+    //     status: 401,
+    //     description: '인증 실패',
+    // })
+    // async createTestDocument(@Query() query: CreateTestDocumentQueryDto) {
+    //     // 이름 -> ID 변환 헬퍼 함수
+    //     const getEmployeeId = (name: TestEmployeeName): string => TEST_EMPLOYEE_ID_MAP[name];
 
-        // Query 파라미터를 내부 DTO로 변환
-        const approvalSteps: CreateTestDocumentDto['approvalSteps'] = [];
-        let stepOrder = 1;
+    //     // Query 파라미터를 내부 DTO로 변환
+    //     const approvalSteps: CreateTestDocumentDto['approvalSteps'] = [];
+    //     let stepOrder = 1;
 
-        // 1. 합의 단계 추가 (AGREEMENT)
-        if (query.agreement1Approver && query.agreement1Status) {
-            approvalSteps.push({
-                stepOrder: stepOrder++,
-                stepType: ApprovalStepType.AGREEMENT,
-                approverId: getEmployeeId(query.agreement1Approver),
-                status: query.agreement1Status,
-            });
-        }
-        if (query.agreement2Approver && query.agreement2Status) {
-            approvalSteps.push({
-                stepOrder: stepOrder++,
-                stepType: ApprovalStepType.AGREEMENT,
-                approverId: getEmployeeId(query.agreement2Approver),
-                status: query.agreement2Status,
-            });
-        }
+    //     // 1. 합의 단계 추가 (AGREEMENT)
+    //     if (query.agreement1Approver && query.agreement1Status) {
+    //         approvalSteps.push({
+    //             stepOrder: stepOrder++,
+    //             stepType: ApprovalStepType.AGREEMENT,
+    //             approverId: getEmployeeId(query.agreement1Approver),
+    //             status: query.agreement1Status,
+    //         });
+    //     }
+    //     if (query.agreement2Approver && query.agreement2Status) {
+    //         approvalSteps.push({
+    //             stepOrder: stepOrder++,
+    //             stepType: ApprovalStepType.AGREEMENT,
+    //             approverId: getEmployeeId(query.agreement2Approver),
+    //             status: query.agreement2Status,
+    //         });
+    //     }
 
-        // 2. 결재 단계 추가 (APPROVAL) - 필수
-        approvalSteps.push({
-            stepOrder: stepOrder++,
-            stepType: ApprovalStepType.APPROVAL,
-            approverId: getEmployeeId(query.approval1Approver),
-            status: query.approval1Status,
-        });
-        if (query.approval2Approver && query.approval2Status) {
-            approvalSteps.push({
-                stepOrder: stepOrder++,
-                stepType: ApprovalStepType.APPROVAL,
-                approverId: getEmployeeId(query.approval2Approver),
-                status: query.approval2Status,
-            });
-        }
-        if (query.approval3Approver && query.approval3Status) {
-            approvalSteps.push({
-                stepOrder: stepOrder++,
-                stepType: ApprovalStepType.APPROVAL,
-                approverId: getEmployeeId(query.approval3Approver),
-                status: query.approval3Status,
-            });
-        }
+    //     // 2. 결재 단계 추가 (APPROVAL) - 필수
+    //     approvalSteps.push({
+    //         stepOrder: stepOrder++,
+    //         stepType: ApprovalStepType.APPROVAL,
+    //         approverId: getEmployeeId(query.approval1Approver),
+    //         status: query.approval1Status,
+    //     });
+    //     if (query.approval2Approver && query.approval2Status) {
+    //         approvalSteps.push({
+    //             stepOrder: stepOrder++,
+    //             stepType: ApprovalStepType.APPROVAL,
+    //             approverId: getEmployeeId(query.approval2Approver),
+    //             status: query.approval2Status,
+    //         });
+    //     }
+    //     if (query.approval3Approver && query.approval3Status) {
+    //         approvalSteps.push({
+    //             stepOrder: stepOrder++,
+    //             stepType: ApprovalStepType.APPROVAL,
+    //             approverId: getEmployeeId(query.approval3Approver),
+    //             status: query.approval3Status,
+    //         });
+    //     }
 
-        // 3. 시행 단계 추가 (IMPLEMENTATION) - 필수
-        approvalSteps.push({
-            stepOrder: stepOrder++,
-            stepType: ApprovalStepType.IMPLEMENTATION,
-            approverId: getEmployeeId(query.implementationApprover),
-            status: query.implementationStatus,
-        });
+    //     // 3. 시행 단계 추가 (IMPLEMENTATION) - 필수
+    //     approvalSteps.push({
+    //         stepOrder: stepOrder++,
+    //         stepType: ApprovalStepType.IMPLEMENTATION,
+    //         approverId: getEmployeeId(query.implementationApprover),
+    //         status: query.implementationStatus,
+    //     });
 
-        // 4. 참조 단계 추가 (REFERENCE)
-        if (query.reference1Approver && query.reference1Status) {
-            approvalSteps.push({
-                stepOrder: stepOrder++,
-                stepType: ApprovalStepType.REFERENCE,
-                approverId: getEmployeeId(query.reference1Approver),
-                status: query.reference1Status,
-            });
-        }
-        if (query.reference2Approver && query.reference2Status) {
-            approvalSteps.push({
-                stepOrder: stepOrder++,
-                stepType: ApprovalStepType.REFERENCE,
-                approverId: getEmployeeId(query.reference2Approver),
-                status: query.reference2Status,
-            });
-        }
+    //     // 4. 참조 단계 추가 (REFERENCE)
+    //     if (query.reference1Approver && query.reference1Status) {
+    //         approvalSteps.push({
+    //             stepOrder: stepOrder++,
+    //             stepType: ApprovalStepType.REFERENCE,
+    //             approverId: getEmployeeId(query.reference1Approver),
+    //             status: query.reference1Status,
+    //         });
+    //     }
+    //     if (query.reference2Approver && query.reference2Status) {
+    //         approvalSteps.push({
+    //             stepOrder: stepOrder++,
+    //             stepType: ApprovalStepType.REFERENCE,
+    //             approverId: getEmployeeId(query.reference2Approver),
+    //             status: query.reference2Status,
+    //         });
+    //     }
 
-        const dto: CreateTestDocumentDto = {
-            title: query.title,
-            content: query.content,
-            drafterId: getEmployeeId(query.drafterName),
-            status: query.status,
-            approvalSteps,
-        };
+    //     const dto: CreateTestDocumentDto = {
+    //         title: query.title,
+    //         content: query.content,
+    //         drafterId: getEmployeeId(query.drafterName),
+    //         status: query.status,
+    //         approvalSteps,
+    //     };
 
-        return await this.documentService.createTestDocument(dto);
-    }
+    //     return await this.documentService.createTestDocument(dto);
+    // }
 }
