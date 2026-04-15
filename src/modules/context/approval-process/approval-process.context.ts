@@ -797,6 +797,58 @@ export class ApprovalProcessContext {
      * @param userId 현재 사용자 ID
      * @returns getMyPendingApprovals와 동일한 항목 형태 배열
      */
+    /**
+     * 내 PENDING 단계가 "지금 처리 가능한 차례"인지: 이전 단계 승인 조건
+     * - APPROVAL: 나보다 앞선 모든 단계가 승인(APPROVED)이어야 함
+     * - AGREEMENT: 나보다 앞선 단계 중 stepOrder가 가장 큰 APPROVAL 한 단계만 승인이면 됨
+     */
+    private 내결재차례직전승인조건을만족하는가(
+        steps: ApprovalStepSnapshot[],
+        pendingStep: ApprovalStepSnapshot,
+    ): boolean {
+        const prior = steps.filter((p) => p.stepOrder < pendingStep.stepOrder);
+
+        if (pendingStep.stepType === ApprovalStepType.APPROVAL) {
+            return prior.every((p) => p.status === ApprovalStatus.APPROVED);
+        }
+
+        if (pendingStep.stepType === ApprovalStepType.AGREEMENT) {
+            const priorApprovals = prior.filter((p) => p.stepType === ApprovalStepType.APPROVAL);
+            if (priorApprovals.length === 0) {
+                return prior.every((p) => p.status === ApprovalStatus.APPROVED);
+            }
+            const nearestApproval = priorApprovals.reduce((a, b) => (a.stepOrder > b.stepOrder ? a : b));
+            return nearestApproval.status === ApprovalStatus.APPROVED;
+        }
+
+        return false;
+    }
+
+    /**
+     * 달력용 previousStepApprovedAt에 쓸 "기준 직전 단계"
+     * - AGREEMENT: 선행 단계 중 가장 가까운 APPROVAL(차례 조건과 동일) — 그 승인 시점이 합의 차례 시작 시점
+     * - APPROVAL: 선행 단계 중 stepOrder가 가장 큰 단계(순서상 바로 이전 단계)
+     */
+    private 내차례기준직전참조단계를구한다(
+        steps: ApprovalStepSnapshot[],
+        pendingStep: ApprovalStepSnapshot,
+    ): ApprovalStepSnapshot | undefined {
+        const prior = steps.filter((p) => p.stepOrder < pendingStep.stepOrder);
+        if (prior.length === 0) {
+            return undefined;
+        }
+
+        if (pendingStep.stepType === ApprovalStepType.AGREEMENT) {
+            const priorApprovals = prior.filter((p) => p.stepType === ApprovalStepType.APPROVAL);
+            if (priorApprovals.length === 0) {
+                return prior.reduce((a, b) => (a.stepOrder > b.stepOrder ? a : b));
+            }
+            return priorApprovals.reduce((a, b) => (a.stepOrder > b.stepOrder ? a : b));
+        }
+
+        return prior.reduce((a, b) => (a.stepOrder > b.stepOrder ? a : b));
+    }
+
     async enrichDocumentsWithPendingApprovalInfo(
         documents: Document[],
         userId: string,
@@ -828,7 +880,7 @@ export class ApprovalProcessContext {
                 comment?: string;
                 approvedAt?: Date;
             }>;
-            /** 직전 단계의 승인일 = 내 결재 차례가 시작된 시점 (달력 표시용) */
+            /** 내 차례 기준 직전 참조 단계의 승인일 (달력 표시용; AGREEMENT는 가장 가까운 선행 APPROVAL 기준) */
             previousStepApprovedAt?: Date;
             submittedAt?: Date;
             createdAt: Date;
@@ -858,7 +910,7 @@ export class ApprovalProcessContext {
                     s.approverId === userId &&
                     s.status === ApprovalStatus.PENDING &&
                     [ApprovalStepType.AGREEMENT, ApprovalStepType.APPROVAL].includes(s.stepType) &&
-                    steps.filter((p) => p.stepOrder < s.stepOrder).every((p) => p.status === ApprovalStatus.APPROVED),
+                    this.내결재차례직전승인조건을만족하는가(steps, s),
             );
             const approvalSteps = steps.map((s) => ({
                 id: s.id,
@@ -882,7 +934,7 @@ export class ApprovalProcessContext {
                 : undefined;
 
             const prevStep = myPendingStep
-                ? steps.find((s) => s.stepOrder === myPendingStep.stepOrder - 1)
+                ? this.내차례기준직전참조단계를구한다(steps, myPendingStep)
                 : undefined;
             const previousStepApprovedAt = prevStep?.approvedAt ?? undefined;
 
