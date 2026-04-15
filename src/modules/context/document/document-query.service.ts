@@ -462,8 +462,7 @@ export class DocumentQueryService {
     }
 
     /**
-     * 해당 연월에 직전 결재자가 승인한 시점(approvedAt)이 포함되고, 현재 내 결재 차례가 돌아온 문서 목록 조회
-     * (미결함 조건 + 직전 결재자의 결재일 연월 필터)
+     * 현재 내 결재 차례가 돌아온 문서(미결함) 중, 문서 상신일(submittedAt)이 해당 연월 범위에 포함되는 목록 조회
      */
     async getMyTurnDocumentsByYearMonth(userId: string, year: number, month: number): Promise<Document[]> {
         const qb = this.documentService
@@ -475,30 +474,11 @@ export class DocumentQueryService {
 
         const start = new Date(year, month - 1, 1);
         const end = new Date(year, month, 1);
-        // 직전 결재자(stepOrder - 1)의 approvedAt이 해당 연월인 문서만
-        qb.andWhere(
-            `document.id IN (
-                SELECT my_step."documentId"
-                FROM approval_step_snapshots my_step
-                INNER JOIN approval_step_snapshots prev_step
-                    ON prev_step."documentId" = my_step."documentId"
-                    AND prev_step."stepOrder" = my_step."stepOrder" - 1
-                WHERE my_step."approverId" = :userId
-                AND my_step."stepType" IN (:...agreementApprovalTypes)
-                AND my_step.status = :myPendingStatus
-                AND prev_step.status = :approvedStepStatus
-                AND prev_step."approvedAt" >= :start
-                AND prev_step."approvedAt" < :end
-            )`,
-            {
-                userId,
-                agreementApprovalTypes: [ApprovalStepType.AGREEMENT, ApprovalStepType.APPROVAL],
-                myPendingStatus: ApprovalStatus.PENDING,
-                approvedStepStatus: ApprovalStatus.APPROVED,
-                start,
-                end,
-            },
-        );
+
+        qb.andWhere('document.submittedAt IS NOT NULL')
+            .andWhere('document.submittedAt >= :start', { start })
+            .andWhere('document.submittedAt < :end', { end });
+
         qb.orderBy('document.submittedAt', 'DESC');
 
         return qb.getMany();

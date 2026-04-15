@@ -83,7 +83,7 @@ import { NotificationContextModule } from './modules/context/notification';
         DocumentBusinessModule,
         ApprovalProcessBusinessModule,
         UserBusinessModule,
-        SeedModule, // 시드/전체삭제 (플로우·결재함 테스트용)
+        // SeedModule, // 시드/전체삭제 (플로우·결재함 테스트용)
         // ApprovalFlowBusinessModule,
         // DocumentBusinessModule,
         // ApprovalProcessBusinessModule,
